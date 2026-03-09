@@ -1,3 +1,6 @@
+const axios = require("axios");
+
+const TRACKER_API_KEY = "fb1f6248-5f55-473d-9fb2-61edeacf1527";
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -101,6 +104,28 @@ app.get("/player/:name/:tag", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+app.get("/tracker/:name/:tag", async (req, res) => {
+  try {
+    const { name, tag } = req.params;
+
+    const response = await axios.get(
+      `https://api.tracker.gg/api/v2/valorant/standard/profile/riot/${encodeURIComponent(name)}%23${encodeURIComponent(tag)}`,
+      {
+        headers: {
+          "TRN-Api-Key": TRACKER_API_KEY
+        }
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Tracker API error:", error.response?.data || error.message);
+    res.status(500).json({
+      error: "Tracker API error",
+      details: error.response?.data || error.message
+    });
+  }
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on http://localhost:${PORT}`);
