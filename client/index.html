@@ -37,6 +37,17 @@
       <a href="leaderboard.html">Leaderboard</a>
       <a href="compare.html">Compare</a>
     </nav>
+    <div id="userMenu" class="user-menu" style="display:none;">
+  <button class="user-menu-btn" onclick="toggleUserMenu()">
+    <span id="userMenuName"></span> ▼
+  </button>
+
+  <div id="userDropdown" class="user-dropdown">
+    <a id="userProfileLink">My Profile</a>
+    <a href="leaderboard.html">Leaderboard</a>
+    <a onclick="logoutPlayer()">Logout</a>
+  </div>
+</div>
 
     <a href="#searchSection" class="search-cta">Search Player</a>
 

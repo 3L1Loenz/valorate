@@ -11,9 +11,23 @@ function setLoggedInPlayer(player) {
   localStorage.setItem("valorateLoggedInPlayer", JSON.stringify(player));
 }
 
-function logoutPlayer() {
-  localStorage.removeItem("valorateLoggedInPlayer");
-  renderLoggedInPlayer();
+function toggleUserMenu() {
+  const dropdown = document.getElementById("userDropdown");
+
+  if (dropdown.style.display === "block") {
+    dropdown.style.display = "none";
+  } else {
+    dropdown.style.display = "block";
+  }
+}
+function toggleUserMenu() {
+  const dropdown = document.getElementById("userDropdown");
+
+  if (dropdown.style.display === "block") {
+    dropdown.style.display = "none";
+  } else {
+    dropdown.style.display = "block";
+  }
 }
 
 function parseRiotId(riotId) {
@@ -100,6 +114,7 @@ function loginPlayer() {
 function renderLoggedInPlayer() {
   const authState = document.getElementById("authState");
   const loggedInState = document.getElementById("loggedInState");
+  const myRankPanel = document.getElementById("myRankPanel");
 
   if (!authState || !loggedInState) return;
 
@@ -110,7 +125,27 @@ function renderLoggedInPlayer() {
     loggedInState.style.display = "none";
     loggedInState.innerHTML = "";
     return;
+    // LOGIN OLDU
+myRankPanel.style.display = "none";
+
+const userMenu = document.getElementById("userMenu");
+const userMenuName = document.getElementById("userMenuName");
+const userProfileLink = document.getElementById("userProfileLink");
+
+if (userMenu) {
+  userMenu.style.display = "block";
+}
+
+if (userMenuName) {
+  userMenuName.textContent = `${player.name}#${player.tag}`;
+}
+
+if (userProfileLink) {
+  userProfileLink.href =
+    `player.html?name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}`;
+}
   }
+  myRankPanel.style.display = "none";
 
   const bestAgent = getTopAgent(player.stats);
   const avgWinRate = getAverageWinRate(player.stats);

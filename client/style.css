@@ -1220,3 +1220,84 @@ padding-top:150px;
   font-size: 24px;
   color: #fff;
 }
+.user-menu {
+  position: relative;
+}
+
+.user-menu-btn {
+  background: transparent;
+  border: 1px solid rgba(255,70,85,0.5);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.user-dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 40px;
+  background: #0c1722;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.user-dropdown a {
+  display: block;
+  padding: 10px 14px;
+  color: white;
+  text-decoration: none;
+}
+
+.user-dropdown a:hover {
+  background: rgba(255,70,85,0.15);
+}
+.current-user-row td {
+  background: rgba(255, 70, 85, 0.12) !important;
+  border-top: 1px solid rgba(255, 70, 85, 0.35);
+  border-bottom: 1px solid rgba(255, 70, 85, 0.35);
+}
+
+.current-user-row:hover td {
+  background: rgba(255, 70, 85, 0.18) !important;
+}
+
+.current-user-row .player-link-row span,
+.current-user-row .rank-badge {
+  color: #ff7580;
+  font-weight: 700;
+}
+.you-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 70, 85, 0.85);
+  vertical-align: middle;
+}
+.current-user-row td {
+  background: rgba(255, 70, 85, 0.12) !important;
+  border-top: 1px solid rgba(255, 70, 85, 0.35);
+  border-bottom: 1px solid rgba(255, 70, 85, 0.35);
+}
+
+.current-user-row:hover td {
+  background: rgba(255, 70, 85, 0.18) !important;
+}
+
+.you-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 70, 85, 0.85);
+}

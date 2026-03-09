@@ -252,18 +252,63 @@
     }
 
     function renderLeaderboard() {
-      const container = document.getElementById("leaderboard");
 
-      if (!filteredData.length) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <h2>No players found</h2>
-            <p>Your current filters returned no matching results.</p>
-            <div class="empty-hint">Try another region or lower min matches.</div>
-          </div>
-        `;
-        return;
-      }
+  const tableBody = document.getElementById("leaderboardTableBody");
+
+  const start = (currentPage - 1) * pageSize;
+  const paginated = leaderboardData.slice(start, start + pageSize);
+
+  const loggedInPlayer = JSON.parse(localStorage.getItem("valorateLoggedInPlayer") || "null");
+
+  tableBody.innerHTML = `
+    ${paginated.map((item, index) => {
+
+      const displayRank = start + index + 1;
+
+      const isCurrentUser =
+        loggedInPlayer &&
+        loggedInPlayer.name.toLowerCase() === item.name.toLowerCase() &&
+        loggedInPlayer.tag.toLowerCase() === item.tag.toLowerCase();
+
+      return `
+        <tr class="${isCurrentUser ? 'current-user-row' : ''}">
+
+          <td>#${displayRank}</td>
+
+          <td>
+            <a class="player-link-row"
+               href="player.html?name=${encodeURIComponent(item.name)}&tag=${encodeURIComponent(item.tag)}">
+
+              <span>
+                ${item.name}#${item.tag}
+                ${isCurrentUser ? '<small class="you-badge">YOU</small>' : ''}
+              </span>
+
+            </a>
+          </td>
+
+          <td>${item.region}</td>
+
+          <td>
+            <span class="rank-badge rank-${item.rank.toLowerCase()}">
+              ${item.rank}
+            </span>
+          </td>
+
+          <td>${item.bestAgent}</td>
+
+          <td>${item.avgWinRate}%</td>
+
+          <td>${item.avgKda}</td>
+
+          <td>${item.totalMatches}</td>
+
+        </tr>
+      `;
+
+    }).join("")}
+  `;
+}
 
       const start = (currentPage - 1) * itemsPerPage;
       const end = start + itemsPerPage;
@@ -281,9 +326,16 @@
             <th>Total Matches</th>
           </tr>
           ${paginated.map((item, index) => {
-            const displayRank = start + index + 1;
-            return `
-              <tr>
+  const displayRank = start + index + 1;
+
+  const loggedInPlayer = JSON.parse(localStorage.getItem("valorateLoggedInPlayer") || "null");
+  const isCurrentUser =
+    loggedInPlayer &&
+    loggedInPlayer.name.toLowerCase() === item.name.toLowerCase() &&
+    loggedInPlayer.tag.toLowerCase() === item.tag.toLowerCase();
+
+  return `
+    <tr class="${isCurrentUser ? 'current-user-row' : ''}">
                 <td>
                   <span class="rank-badge rank-${displayRank}">
                     ${getRankDisplay(displayRank)}
@@ -293,7 +345,10 @@
                   <div class="player-hover-wrap">
                     <a class="player-link player-link-row" href="player.html?name=${encodeURIComponent(item.name)}&tag=${encodeURIComponent(item.tag)}">
                       <img src="${getPlayerAvatar(item.name)}" alt="${item.name}" class="player-avatar" />
-                      <span>${item.name}#${item.tag}</span>
+                      <span>
+  ${item.name}#${item.tag}
+  ${isCurrentUser ? '<small class="you-badge">YOU</small>' : ''}
+</span>
                     </a>
                   </div>
                 </td>
@@ -309,10 +364,10 @@
                 <td>${item.totalMatches}</td>
               </tr>
             `;
-          }).join("")}
-        </table>
-      `;
-    }
+}).join("")}
+</table>
+`;
+
 
     function updatePagination() {
       const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
