@@ -1,19 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>ValoRate - Global VALORANT Leaderboard</title>
 
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+<meta name="description" content="View the global VALORANT leaderboard on ValoRate. Discover top players ranked by win rate, KDA and total matches.">
+
+<meta property="og:title" content="ValoRate - Global VALORANT Leaderboard">
+<meta property="og:description" content="Discover the best VALORANT players worldwide ranked by performance, win rate and KDA.">
+<meta property="og:image" content="https://valorate.onrender.com/images/valorate-logo.png">
+<meta property="og:url" content="https://valorate.onrender.com/leaderboard.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ValoRate">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ValoRate - Global VALORANT Leaderboard">
+<meta name="twitter:description" content="Explore the global VALORANT leaderboard and top performing players.">
+<meta name="twitter:image" content="https://valorate.onrender.com/images/valorate-logo.png">
+
+<link rel="stylesheet" href="style.css">
+
 </head>
-<body
-  data-title="ValoRate - Global VALORANT Leaderboard"
-  data-description="View the global VALORANT leaderboard on ValoRate."
-  data-og-title="ValoRate - Global VALORANT Leaderboard"
-  data-og-description="Discover the best VALORANT players worldwide ranked by performance."
-  data-og-url="https://valorate.onrender.com/leaderboard.html"
->
-<div id="site-navbar"></div>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <img src="images/valorate-logo.png" class="brand-logo" alt="ValoRate Logo" />
+      </a>
+
+      <nav class="main-nav">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="compare.html">Compare</a>
+      </nav>
+
+      <a href="index.html#searchSection" class="search-cta">Search Player</a>
+    </div>
+  </header>
 
   <div class="container page-wrapper">
     <div class="page-header">
@@ -56,7 +86,24 @@
     </div>
   </div>
 
- <div id="site-footer"></div>
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <h3>ValoRate</h3>
+        <p>Global VALORANT agent leaderboards, player profiles, and comparisons.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="compare.html">Compare</a>
+        <a href="leaderboard.html">Leaderboard</a>
+      </div>
+    </div>
+
+    <div class="footer-disclaimer">
+      ValoRate is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing VALORANT. VALORANT and Riot Games are trademarks or registered trademarks of Riot Games, Inc.
+    </div>
+  </footer>
 
   <script>
     const API_URL = window.location.origin;
@@ -316,6 +363,5 @@
 
     loadLeaderboard();
   </script>
-  <script src="/js/layout.js"></script>
 </body>
 </html>
