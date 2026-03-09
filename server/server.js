@@ -1,20 +1,27 @@
-const axios = require("axios");
-
-const TRACKER_API_KEY = "fb1f6248-5f55-473d-9fb2-61edeacf1527";
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const axios = require("axios");
 
 const app = express();
 
 app.use(cors());
+app.use(express.json());
 app.use(express.static(path.join(__dirname, "../client")));
 
+// Local mock data
 const agents = require("./data/agents.json");
 const players = require("./data/players.json");
 const leaderboard = require("./data/leaderboard.json");
 
-// HTML pages
+// ===== CONFIG =====
+const PORT = process.env.PORT || 3000;
+
+// HenrikDev API key'in varsa buraya koy
+// Yoksa boş bırak, bazı endpointler yine çalışabilir ama rate limit daha düşük olur
+const HENRIK_API_KEY = "HDEV-34c2128c-713d-41f6-bb9c-6ae06c891dfd";
+
+// ===== STATIC PAGES =====
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../client", "index.html"));
 });
@@ -23,8 +30,16 @@ app.get("/agent.html", (req, res) => {
   res.sendFile(path.join(__dirname, "../client", "agent.html"));
 });
 
+app.get("/agents.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client", "agents.html"));
+});
+
 app.get("/leaderboard.html", (req, res) => {
   res.sendFile(path.join(__dirname, "../client", "leaderboard.html"));
+});
+
+app.get("/agent-leaderboard.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client", "agent-leaderboard.html"));
 });
 
 app.get("/player.html", (req, res) => {
@@ -35,45 +50,13 @@ app.get("/compare.html", (req, res) => {
   res.sendFile(path.join(__dirname, "../client", "compare.html"));
 });
 
-app.get("/agents.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client", "agents.html"));
-});
-
-// API routes
+// ===== LOCAL DATA ROUTES =====
 app.get("/agents", (req, res) => {
   res.json(agents);
 });
 
 app.get("/players", (req, res) => {
   res.json(players);
-});
-
-app.get("/global-leaderboard", (req, res) => {
-  const globalData = players.map((player) => {
-    const avgWinRate =
-      player.stats.reduce((sum, item) => sum + item.winRate, 0) / player.stats.length;
-
-    const avgKda =
-      player.stats.reduce((sum, item) => sum + item.kda, 0) / player.stats.length;
-
-    const totalMatches =
-      player.stats.reduce((sum, item) => sum + item.matches, 0);
-
-    const bestAgent = [...player.stats].sort((a, b) => a.worldRank - b.worldRank)[0];
-
-    return {
-      name: player.name,
-      tag: player.tag,
-      region: player.region,
-      rank: player.rank,
-      avgWinRate: Number(avgWinRate.toFixed(1)),
-      avgKda: Number(avgKda.toFixed(2)),
-      totalMatches,
-      bestAgent: bestAgent.agent
-    };
-  });
-
-  res.json(globalData);
 });
 
 app.get("/leaderboard/:agent", (req, res) => {
@@ -103,26 +86,76 @@ app.get("/player/:name/:tag", (req, res) => {
   res.json(player);
 });
 
-const PORT = process.env.PORT || 3000;
-app.get("/tracker/:name/:tag", async (req, res) => {
+app.get("/global-leaderboard", (req, res) => {
+  const globalData = players.map((player) => {
+    const avgWinRate =
+      player.stats.reduce((sum, item) => sum + item.winRate, 0) /
+      player.stats.length;
+
+    const avgKda =
+      player.stats.reduce((sum, item) => sum + item.kda, 0) /
+      player.stats.length;
+
+    const totalMatches = player.stats.reduce(
+      (sum, item) => sum + item.matches,
+      0
+    );
+
+    const bestAgent = [...player.stats].sort(
+      (a, b) => a.worldRank - b.worldRank
+    )[0];
+
+    return {
+      name: player.name,
+      tag: player.tag,
+      region: player.region,
+      rank: player.rank,
+      avgWinRate: Number(avgWinRate.toFixed(1)),
+      avgKda: Number(avgKda.toFixed(2)),
+      totalMatches,
+      bestAgent: bestAgent.agent,
+    };
+  });
+
+  res.json(globalData);
+});
+
+// ===== REAL API ROUTE (HenrikDev) =====
+app.get("/live-player/:name/:tag", async (req, res) => {
   try {
     const { name, tag } = req.params;
 
-    const response = await axios.get(
-      `https://api.tracker.gg/api/v2/valorant/standard/profile/riot/${encodeURIComponent(name)}%23${encodeURIComponent(tag)}`,
-      {
-        headers: {
-          "TRN-Api-Key": TRACKER_API_KEY
-        }
-      }
+    const headers = {};
+    if (HENRIK_API_KEY && HENRIK_API_KEY !== "HDEV-34c2128c-713d-41f6-bb9c-6ae06c891dfd") {
+      headers.Authorization = HENRIK_API_KEY;
+    }
+
+    // Account endpoint
+    const accountResponse = await axios.get(
+      `https://api.henrikdev.xyz/valorant/v1/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
+      { headers }
     );
 
-    res.json(response.data);
+    // MMR endpoint
+    const mmrResponse = await axios.get(
+      `https://api.henrikdev.xyz/valorant/v2/mmr/ap/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
+      { headers }
+    ).catch(() => null);
+
+    res.json({
+      source: "henrikdev",
+      account: accountResponse.data,
+      mmr: mmrResponse ? mmrResponse.data : null,
+    });
   } catch (error) {
-    console.error("Tracker API error:", error.response?.data || error.message);
-    res.status(500).json({
-      error: "Tracker API error",
-      details: error.response?.data || error.message
+    console.error(
+      "Henrik API error:",
+      error.response?.data || error.message
+    );
+
+    res.status(error.response?.status || 500).json({
+      error: "Henrik API error",
+      details: error.response?.data || error.message,
     });
   }
 });
