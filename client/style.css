@@ -1042,3 +1042,181 @@ padding-top:150px;
   margin-top: 6px;
   opacity: 0.85;
 }
+.my-rank-panel {
+  margin-top: 24px;
+}
+
+.login-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.login-form input {
+  flex: 1;
+  min-width: 240px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 70, 85, 0.2);
+  background: rgba(7, 16, 25, 0.95);
+  color: #fff;
+  outline: none;
+}
+
+.login-form button,
+.logout-btn,
+.profile-btn {
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 70, 85, 0.45);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.login-form button:hover,
+.logout-btn:hover,
+.profile-btn:hover {
+  background: rgba(255, 70, 85, 0.12);
+}
+
+.my-rank-card {
+  display: grid;
+  gap: 16px;
+}
+
+.my-rank-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.my-rank-header h2 {
+  margin: 0;
+}
+
+.my-rank-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.my-rank-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.my-rank-mini-card {
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(17, 34, 49, 0.95);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.my-rank-mini-card span {
+  display: block;
+  font-size: 13px;
+  color: #9cb1c5;
+  margin-bottom: 8px;
+}
+
+.my-rank-mini-card strong {
+  font-size: 24px;
+  color: #fff;
+}
+.my-rank-panel {
+  margin-top: 24px;
+}
+
+.login-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.login-form input {
+  flex: 1;
+  min-width: 240px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 70, 85, 0.2);
+  background: rgba(7, 16, 25, 0.95);
+  color: #fff;
+  outline: none;
+}
+
+.login-form button,
+.logout-btn,
+.profile-btn {
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 70, 85, 0.45);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-form button:hover,
+.logout-btn:hover,
+.profile-btn:hover {
+  background: rgba(255, 70, 85, 0.12);
+}
+
+.my-rank-card {
+  display: grid;
+  gap: 16px;
+}
+
+.my-rank-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.my-rank-header h2 {
+  margin: 0;
+}
+
+.my-rank-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.my-rank-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.my-rank-mini-card {
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(17, 34, 49, 0.95);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.my-rank-mini-card span {
+  display: block;
+  font-size: 13px;
+  color: #9cb1c5;
+  margin-bottom: 8px;
+}
+
+.my-rank-mini-card strong {
+  font-size: 24px;
+  color: #fff;
+}

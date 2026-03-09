@@ -2,6 +2,170 @@ const API_URL = window.location.origin;
 let allPlayers = [];
 let selectedIndex = -1;
 let currentMatches = [];
+function getLoggedInPlayer() {
+  const saved = localStorage.getItem("valorateLoggedInPlayer");
+  return saved ? JSON.parse(saved) : null;
+}
+
+function setLoggedInPlayer(player) {
+  localStorage.setItem("valorateLoggedInPlayer", JSON.stringify(player));
+}
+
+function logoutPlayer() {
+  localStorage.removeItem("valorateLoggedInPlayer");
+  renderLoggedInPlayer();
+}
+
+function parseRiotId(riotId) {
+  if (!riotId.includes("#")) return null;
+
+  const [name, tag] = riotId.split("#");
+  if (!name || !tag) return null;
+
+  return {
+    name: name.trim(),
+    tag: tag.trim()
+  };
+}
+
+function getTopAgent(stats) {
+  return [...stats].sort((a, b) => a.worldRank - b.worldRank)[0];
+}
+
+function getAverageWinRate(stats) {
+  return (stats.reduce((sum, item) => sum + item.winRate, 0) / stats.length).toFixed(1);
+}
+
+function getAverageKda(stats) {
+  return (stats.reduce((sum, item) => sum + item.kda, 0) / stats.length).toFixed(2);
+}
+
+function getTotalMatches(stats) {
+  return stats.reduce((sum, item) => sum + item.matches, 0);
+}
+
+function buildGlobalRankingList() {
+  return allPlayers.map((player) => {
+    const topAgent = getTopAgent(player.stats);
+
+    return {
+      name: player.name,
+      tag: player.tag,
+      region: player.region,
+      rank: player.rank,
+      bestAgent: topAgent.agent,
+      avgWinRate: Number(getAverageWinRate(player.stats)),
+      avgKda: Number(getAverageKda(player.stats)),
+      totalMatches: getTotalMatches(player.stats)
+    };
+  }).sort((a, b) => b.avgWinRate - a.avgWinRate);
+}
+
+function findPlayerGlobalPosition(name, tag) {
+  const ranking = buildGlobalRankingList();
+  return ranking.findIndex(
+    (item) =>
+      item.name.toLowerCase() === name.toLowerCase() &&
+      item.tag.toLowerCase() === tag.toLowerCase()
+  ) + 1;
+}
+
+function loginPlayer() {
+  const input = document.getElementById("loginRiotId");
+  if (!input) return;
+
+  const riotId = input.value.trim();
+  const parsed = parseRiotId(riotId);
+
+  if (!parsed) {
+    alert("Please enter Riot ID in this format: Name#TAG");
+    return;
+  }
+
+  const player = allPlayers.find(
+    (item) =>
+      item.name.toLowerCase() === parsed.name.toLowerCase() &&
+      item.tag.toLowerCase() === parsed.tag.toLowerCase()
+  );
+
+  if (!player) {
+    alert("Player not found.");
+    return;
+  }
+
+  setLoggedInPlayer(player);
+  renderLoggedInPlayer();
+}
+
+function renderLoggedInPlayer() {
+  const authState = document.getElementById("authState");
+  const loggedInState = document.getElementById("loggedInState");
+
+  if (!authState || !loggedInState) return;
+
+  const player = getLoggedInPlayer();
+
+  if (!player) {
+    authState.style.display = "block";
+    loggedInState.style.display = "none";
+    loggedInState.innerHTML = "";
+    return;
+  }
+
+  const bestAgent = getTopAgent(player.stats);
+  const avgWinRate = getAverageWinRate(player.stats);
+  const avgKda = getAverageKda(player.stats);
+  const totalMatches = getTotalMatches(player.stats);
+  const globalPosition = findPlayerGlobalPosition(player.name, player.tag);
+
+  authState.style.display = "none";
+  loggedInState.style.display = "block";
+
+  loggedInState.innerHTML = `
+    <div class="my-rank-card">
+      <div class="my-rank-header">
+        <div>
+          <h2>${player.name}#${player.tag}</h2>
+          <p>${player.region} • ${player.rank}</p>
+        </div>
+
+        <div class="my-rank-actions">
+          <a class="profile-btn" href="player.html?name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}">
+            Open My Profile
+          </a>
+          <button class="logout-btn" onclick="logoutPlayer()">Logout</button>
+        </div>
+      </div>
+
+      <div class="my-rank-stats">
+        <div class="my-rank-mini-card">
+          <span>Global Position</span>
+          <strong>#${globalPosition}</strong>
+        </div>
+
+        <div class="my-rank-mini-card">
+          <span>Best Agent</span>
+          <strong>${bestAgent.agent}</strong>
+        </div>
+
+        <div class="my-rank-mini-card">
+          <span>Avg Win Rate</span>
+          <strong>${avgWinRate}%</strong>
+        </div>
+
+        <div class="my-rank-mini-card">
+          <span>Avg KDA</span>
+          <strong>${avgKda}</strong>
+        </div>
+
+        <div class="my-rank-mini-card">
+          <span>Total Matches</span>
+          <strong>${totalMatches}</strong>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
 function getAgentImage(agentName) {
   return `images/agents/${agentName.toLowerCase()}.png`;
@@ -270,11 +434,177 @@ function setupAutocomplete() {
   });
 }
 
+function getLoggedInPlayer() {
+  const saved = localStorage.getItem("valorateLoggedInPlayer");
+  return saved ? JSON.parse(saved) : null;
+}
+
+function setLoggedInPlayer(player) {
+  localStorage.setItem("valorateLoggedInPlayer", JSON.stringify(player));
+}
+
+function logoutPlayer() {
+  localStorage.removeItem("valorateLoggedInPlayer");
+  renderLoggedInPlayer();
+}
+
+function parseRiotId(riotId) {
+  if (!riotId.includes("#")) return null;
+
+  const [name, tag] = riotId.split("#");
+  if (!name || !tag) return null;
+
+  return {
+    name: name.trim(),
+    tag: tag.trim()
+  };
+}
+
+function getTopAgent(stats) {
+  return [...stats].sort((a, b) => a.worldRank - b.worldRank)[0];
+}
+
+function getAverageWinRate(stats) {
+  return (stats.reduce((sum, item) => sum + item.winRate, 0) / stats.length).toFixed(1);
+}
+
+function getAverageKda(stats) {
+  return (stats.reduce((sum, item) => sum + item.kda, 0) / stats.length).toFixed(2);
+}
+
+function getTotalMatches(stats) {
+  return stats.reduce((sum, item) => sum + item.matches, 0);
+}
+
+function buildGlobalRankingList() {
+  return allPlayers.map((player) => {
+    const topAgent = getTopAgent(player.stats);
+
+    return {
+      name: player.name,
+      tag: player.tag,
+      region: player.region,
+      rank: player.rank,
+      bestAgent: topAgent.agent,
+      avgWinRate: Number(getAverageWinRate(player.stats)),
+      avgKda: Number(getAverageKda(player.stats)),
+      totalMatches: getTotalMatches(player.stats)
+    };
+  }).sort((a, b) => b.avgWinRate - a.avgWinRate);
+}
+
+function findPlayerGlobalPosition(name, tag) {
+  const ranking = buildGlobalRankingList();
+  return ranking.findIndex(
+    (item) =>
+      item.name.toLowerCase() === name.toLowerCase() &&
+      item.tag.toLowerCase() === tag.toLowerCase()
+  ) + 1;
+}
+
+function loginPlayer() {
+  const input = document.getElementById("loginRiotId");
+  if (!input) return;
+
+  const riotId = input.value.trim();
+  const parsed = parseRiotId(riotId);
+
+  if (!parsed) {
+    alert("Please enter Riot ID in this format: Name#TAG");
+    return;
+  }
+
+  const player = allPlayers.find(
+    (item) =>
+      item.name.toLowerCase() === parsed.name.toLowerCase() &&
+      item.tag.toLowerCase() === parsed.tag.toLowerCase()
+  );
+
+  if (!player) {
+    alert("Player not found.");
+    return;
+  }
+
+  setLoggedInPlayer(player);
+  renderLoggedInPlayer();
+}
+
+function renderLoggedInPlayer() {
+  const authState = document.getElementById("authState");
+  const loggedInState = document.getElementById("loggedInState");
+
+  if (!authState || !loggedInState) return;
+
+  const player = getLoggedInPlayer();
+
+  if (!player) {
+    authState.style.display = "block";
+    loggedInState.style.display = "none";
+    loggedInState.innerHTML = "";
+    return;
+  }
+
+  const bestAgent = getTopAgent(player.stats);
+  const avgWinRate = getAverageWinRate(player.stats);
+  const avgKda = getAverageKda(player.stats);
+  const totalMatches = getTotalMatches(player.stats);
+  const globalPosition = findPlayerGlobalPosition(player.name, player.tag);
+
+  authState.style.display = "none";
+  loggedInState.style.display = "block";
+
+  loggedInState.innerHTML = `
+    <div class="my-rank-card">
+      <div class="my-rank-header">
+        <div>
+          <h2>${player.name}#${player.tag}</h2>
+          <p>${player.region} • ${player.rank}</p>
+        </div>
+
+        <div class="my-rank-actions">
+          <a class="profile-btn" href="player.html?name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}">
+            Open My Profile
+          </a>
+          <button class="logout-btn" onclick="logoutPlayer()">Logout</button>
+        </div>
+      </div>
+
+      <div class="my-rank-stats">
+        <div class="my-rank-mini-card">
+          <span>Global Position</span>
+          <strong>#${globalPosition}</strong>
+        </div>
+
+        <div class="my-rank-mini-card">
+          <span>Best Agent</span>
+          <strong>${bestAgent.agent}</strong>
+        </div>
+
+        <div class="my-rank-mini-card">
+          <span>Avg Win Rate</span>
+          <strong>${avgWinRate}%</strong>
+        </div>
+
+        <div class="my-rank-mini-card">
+          <span>Avg KDA</span>
+          <strong>${avgKda}</strong>
+        </div>
+
+        <div class="my-rank-mini-card">
+          <span>Total Matches</span>
+          <strong>${totalMatches}</strong>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function initApp() {
   await loadPlayers();
   await loadAgents();
   renderRecentSearches();
   setupAutocomplete();
+  renderLoggedInPlayer();
 }
 
 initApp();
