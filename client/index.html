@@ -53,10 +53,35 @@
     </div>
 
     <div class="hero-search" id="searchSection">
-      <div class="search-box landing-search-box">
-        <input type="text" id="playerInput" placeholder="Enter Riot ID (example: Ace#EU1)" />
-        <button onclick="searchPlayer()">Search Player</button>
-      </div>
+
+  <div class="search-box landing-search-box">
+    <input type="text" id="playerInput" placeholder="Enter Riot ID (example: Ace#EU1)" />
+    <button onclick="searchPlayer()">Search Player</button>
+  </div>
+
+  <div id="autocompleteBox" class="autocomplete-box"></div>
+
+  <div id="recentSearchesBox" class="recent-searches-box">
+    <h3>Recent Searches</h3>
+    <div id="recentSearchesList" class="recent-searches-list"></div>
+  </div>
+
+</div>
+
+<div class="panel my-rank-panel" id="myRankPanel">
+  <div id="authState">
+    <h2>My Ranking</h2>
+    <p>Sign in with your Riot ID to view your personal ranking overview.</p>
+
+    <div class="login-form">
+      <input type="text" id="loginRiotId" placeholder="Enter Riot ID (example: Ace#EU1)" />
+      <button onclick="loginPlayer()">Sign In</button>
+    </div>
+  </div>
+
+  <div id="loggedInState" style="display:none;"></div>
+</div>
+      
 
       <div id="autocompleteBox" class="autocomplete-box"></div>
 
