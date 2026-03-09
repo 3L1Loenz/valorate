@@ -61,7 +61,7 @@
   </footer>
 
   <script>
-    const API_URL = "http://localhost:3000";
+    const API_URL = window.location.origin;
     const params = new URLSearchParams(window.location.search);
     const name = params.get("name");
     const tag = params.get("tag");
