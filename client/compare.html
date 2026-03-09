@@ -91,6 +91,25 @@
   </footer>
 
   <script>
+
+    function getRankClass(rank) {
+  if (!rank) return "";
+
+  const normalized = rank.toLowerCase().trim();
+
+  if (normalized.includes("iron")) return "rank-iron";
+  if (normalized.includes("bronze")) return "rank-bronze";
+  if (normalized.includes("silver")) return "rank-silver";
+  if (normalized.includes("gold")) return "rank-gold";
+  if (normalized.includes("platinum")) return "rank-platinum";
+  if (normalized.includes("diamond")) return "rank-diamond";
+  if (normalized.includes("ascendant")) return "rank-ascendant";
+  if (normalized.includes("immortal")) return "rank-immortal";
+  if (normalized.includes("radiant")) return "rank-radiant";
+
+  return "";
+}
+
     const API_URL = window.location.origin;
 
     function getAgentImage(agentName) {
@@ -174,7 +193,10 @@
         <div class="compare-grid">
           <div class="panel compare-player-card">
             <h2>${playerOne.name}#${playerOne.tag}</h2>
-            <p>${playerOne.region} • ${playerOne.rank}</p>
+            <p>
+  ${playerOne.region} •
+  <span class="rank-pill ${getRankClass(playerOne.rank)}">${playerOne.rank}</span>
+</p>
 
             <div class="best-agent-highlight">
               <img src="${getAgentImage(topOne.agent)}" alt="${topOne.agent}" class="best-agent-image" />
@@ -203,7 +225,10 @@
 
           <div class="panel compare-player-card">
             <h2>${playerTwo.name}#${playerTwo.tag}</h2>
-            <p>${playerTwo.region} • ${playerTwo.rank}</p>
+            <p>
+  ${playerTwo.region} •
+  <span class="rank-pill ${getRankClass(playerTwo.rank)}">${playerTwo.rank}</span>
+</p>
 
             <div class="best-agent-highlight">
               <img src="${getAgentImage(topTwo.agent)}" alt="${topTwo.agent}" class="best-agent-image" />

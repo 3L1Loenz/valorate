@@ -161,7 +161,10 @@ if (userProfileLink) {
       <div class="my-rank-header">
         <div>
           <h2>${player.name}#${player.tag}</h2>
-          <p>${player.region} • ${player.rank}</p>
+          <p>
+  ${player.region} •
+  <span class="rank-pill ${getRankClass(player.rank)}">${player.rank}</span>
+</p>
         </div>
 
         <div class="my-rank-actions">
@@ -204,6 +207,23 @@ if (userProfileLink) {
 
 function getAgentImage(agentName) {
   return `images/agents/${agentName.toLowerCase()}.png`;
+}
+function getRankClass(rank) {
+  if (!rank) return "";
+
+  const normalized = rank.toLowerCase().trim();
+
+  if (normalized.includes("iron")) return "rank-iron";
+  if (normalized.includes("bronze")) return "rank-bronze";
+  if (normalized.includes("silver")) return "rank-silver";
+  if (normalized.includes("gold")) return "rank-gold";
+  if (normalized.includes("platinum")) return "rank-platinum";
+  if (normalized.includes("diamond")) return "rank-diamond";
+  if (normalized.includes("ascendant")) return "rank-ascendant";
+  if (normalized.includes("immortal")) return "rank-immortal";
+  if (normalized.includes("radiant")) return "rank-radiant";
+
+  return "";
 }
 
 function getRecentSearches() {
@@ -536,6 +556,23 @@ function findPlayerGlobalPosition(name, tag) {
       item.tag.toLowerCase() === tag.toLowerCase()
   ) + 1;
 }
+function getRankClass(rank) {
+  if (!rank) return "";
+
+  const normalized = rank.toLowerCase().trim();
+
+  if (normalized.includes("iron")) return "rank-iron";
+  if (normalized.includes("bronze")) return "rank-bronze";
+  if (normalized.includes("silver")) return "rank-silver";
+  if (normalized.includes("gold")) return "rank-gold";
+  if (normalized.includes("platinum")) return "rank-platinum";
+  if (normalized.includes("diamond")) return "rank-diamond";
+  if (normalized.includes("ascendant")) return "rank-ascendant";
+  if (normalized.includes("immortal")) return "rank-immortal";
+  if (normalized.includes("radiant")) return "rank-radiant";
+
+  return "";
+}
 
 function loginPlayer() {
   const input = document.getElementById("loginRiotId");
@@ -593,7 +630,10 @@ function renderLoggedInPlayer() {
       <div class="my-rank-header">
         <div>
           <h2>${player.name}#${player.tag}</h2>
-          <p>${player.region} • ${player.rank}</p>
+          <p>
+  ${player.region} •
+  <span class="rank-pill ${getRankClass(player.rank)}">${player.rank}</span>
+</p>
         </div>
 
         <div class="my-rank-actions">

@@ -1301,3 +1301,81 @@ padding-top:150px;
   color: #fff;
   background: rgba(255, 70, 85, 0.85);
 }
+.rank-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.rank-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(255,255,255,0.08);
+  margin-left: 6px;
+}
+
+.rank-iron {
+  background: rgba(120, 120, 120, 0.18);
+  color: #c9c9c9;
+}
+
+.rank-bronze {
+  background: rgba(120, 78, 52, 0.22);
+  color: #d6a27e;
+}
+
+.rank-silver {
+  background: rgba(150, 160, 170, 0.22);
+  color: #dfe7ef;
+}
+
+.rank-gold {
+  background: rgba(180, 145, 40, 0.22);
+  color: #ffd76b;
+}
+
+.rank-platinum {
+  background: rgba(40, 150, 150, 0.22);
+  color: #7ff1ea;
+}
+
+.rank-diamond {
+  background: rgba(85, 120, 255, 0.22);
+  color: #9db4ff;
+}
+
+.rank-ascendant {
+  background: rgba(60, 180, 90, 0.22);
+  color: #87f0a0;
+}
+
+.rank-immortal {
+  background: rgba(190, 55, 90, 0.22);
+  color: #ff7d98;
+}
+
+.rank-radiant {
+  background: rgba(255, 180, 70, 0.22);
+  color: #ffd38a;
+}
+
+.rank-iron { background: rgba(120, 120, 120, 0.18); color: #c9c9c9; }
+.rank-bronze { background: rgba(120, 78, 52, 0.22); color: #d6a27e; }
+.rank-silver { background: rgba(150, 160, 170, 0.22); color: #dfe7ef; }
+.rank-gold { background: rgba(180, 145, 40, 0.22); color: #ffd76b; }
+.rank-platinum { background: rgba(40, 150, 150, 0.22); color: #7ff1ea; }
+.rank-diamond { background: rgba(85, 120, 255, 0.22); color: #9db4ff; }
+.rank-ascendant { background: rgba(60, 180, 90, 0.22); color: #87f0a0; }
+.rank-immortal { background: rgba(190, 55, 90, 0.22); color: #ff7d98; }
+.rank-radiant { background: rgba(255, 180, 70, 0.22); color: #ffd38a; }

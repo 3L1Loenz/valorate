@@ -82,6 +82,25 @@
   </footer>
 
   <script>
+
+    function getRankClass(rank) {
+  if (!rank) return "";
+
+  const normalized = rank.toLowerCase().trim();
+
+  if (normalized.includes("iron")) return "rank-iron";
+  if (normalized.includes("bronze")) return "rank-bronze";
+  if (normalized.includes("silver")) return "rank-silver";
+  if (normalized.includes("gold")) return "rank-gold";
+  if (normalized.includes("platinum")) return "rank-platinum";
+  if (normalized.includes("diamond")) return "rank-diamond";
+  if (normalized.includes("ascendant")) return "rank-ascendant";
+  if (normalized.includes("immortal")) return "rank-immortal";
+  if (normalized.includes("radiant")) return "rank-radiant";
+
+  return "";
+}
+
     const API_URL = window.location.origin;
     const params = new URLSearchParams(window.location.search);
     const name = params.get("name");
@@ -127,7 +146,10 @@
         <div class="player-hero">
           <div>
             <h1>${data.name}#${data.tag}</h1>
-            <p>${data.region} • ${data.rank}</p>
+            <p>
+  ${data.region} •
+  <span class="rank-pill ${getRankClass(data.rank)}">${data.rank}</span>
+</p>
           </div>
         </div>
 
