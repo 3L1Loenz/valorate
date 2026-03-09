@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Global Leaderboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <img src="images/valorate-logo.png" class="brand-logo" alt="ValoRate Logo" />
+      </a>
+
+      <nav class="main-nav">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="compare.html">Compare</a>
+      </nav>
+
+      <a href="index.html#searchSection" class="search-cta">Search Player</a>
+    </div>
+  </header>
+
+  <div class="container page-wrapper">
+    <div class="page-header">
+      <p>Global VALORANT players ranked by overall performance.</p>
+    </div>
+
+    <div class="panel">
+      <h1 id="title">Global Player Leaderboard</h1>
+      <p id="subtitle">Rank players by average win rate, KDA, and total matches.</p>
+
+      <div class="leaderboard-filters">
+        <select id="regionFilter">
+          <option value="ALL">All Regions</option>
+          <option value="EU">EU</option>
+          <option value="NA">NA</option>
+          <option value="KR">KR</option>
+          <option value="AP">AP</option>
+        </select>
+
+        <input type="number" id="minMatchesFilter" placeholder="Min matches" min="0" />
+
+        <select id="sortFilter">
+          <option value="avgWinRate">Sort by Win Rate</option>
+          <option value="avgKda">Sort by KDA</option>
+          <option value="totalMatches">Sort by Matches</option>
+        </select>
+
+        <button id="applyFiltersBtn">Apply Filters</button>
+      </div>
+
+      <div id="podiumSection" class="podium-section"></div>
+      <div id="summaryCards" class="summary-grid"></div>
+      <div id="leaderboard"></div>
+
+      <div class="pagination">
+        <button id="prevBtn">Previous</button>
+        <span id="pageInfo">Page 1</span>
+        <button id="nextBtn">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <h3>ValoRate</h3>
+        <p>Global VALORANT agent leaderboards, player profiles, and comparisons.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="compare.html">Compare</a>
+        <a href="leaderboard.html">Leaderboard</a>
+      </div>
+    </div>
+
+    <div class="footer-disclaimer">
+      ValoRate is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing VALORANT. VALORANT and Riot Games are trademarks or registered trademarks of Riot Games, Inc.
+    </div>
+  </footer>
+
+  <script>
+    const API_URL = "http://localhost:3000";
+
+    let originalData = [];
+    let filteredData = [];
+    let currentPage = 1;
+    const itemsPerPage = 5;
+
+    function getAgentImage(agentName) {
+      return `images/agents/${agentName.toLowerCase()}.png`;
+    }
+
+    function getPlayerAvatar(playerName) {
+      return `images/avatars/${playerName.toLowerCase()}.png`;
+    }
+
+    function getRankDisplay(rankNumber) {
+      if (rankNumber === 1) return "🥇 #1";
+      if (rankNumber === 2) return "🥈 #2";
+      if (rankNumber === 3) return "🥉 #3";
+      return `#${rankNumber}`;
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch(`${API_URL}/global-leaderboard`);
+        const data = await response.json();
+
+        originalData = Array.isArray(data) ? data : [];
+        filteredData = [...originalData];
+        currentPage = 1;
+
+        applySortOnly();
+        updateSummaryCards(filteredData);
+        renderPodium(filteredData);
+        renderLeaderboard();
+        updatePagination();
+      } catch (error) {
+        document.getElementById("leaderboard").innerHTML = `
+          <div class="empty-state">
+            <h2>Leaderboard could not load</h2>
+            <p>There was a problem loading player data.</p>
+            <div class="empty-hint">Make sure the backend server is running.</div>
+          </div>
+        `;
+      }
+    }
+
+    function applySortOnly() {
+      const sortBy = document.getElementById("sortFilter").value;
+
+      if (sortBy === "avgWinRate") {
+        filteredData.sort((a, b) => b.avgWinRate - a.avgWinRate);
+      } else if (sortBy === "avgKda") {
+        filteredData.sort((a, b) => b.avgKda - a.avgKda);
+      } else if (sortBy === "totalMatches") {
+        filteredData.sort((a, b) => b.totalMatches - a.totalMatches);
+      }
+    }
+
+    function updateSummaryCards(data) {
+      const summary = document.getElementById("summaryCards");
+
+      if (!data.length) {
+        summary.innerHTML = "";
+        return;
+      }
+
+      const topPlayer = data[0];
+      const highestWinRate = [...data].sort((a, b) => b.avgWinRate - a.avgWinRate)[0];
+      const highestKda = [...data].sort((a, b) => b.avgKda - a.avgKda)[0];
+
+      summary.innerHTML = `
+        <div class="summary-card">
+          <span>#1 Player</span>
+          <strong>${topPlayer.name}#${topPlayer.tag}</strong>
+          <small>${topPlayer.region} • ${topPlayer.avgWinRate}% WR • ${topPlayer.avgKda} KDA</small>
+        </div>
+        <div class="summary-card">
+          <span>Highest Win Rate</span>
+          <strong>${highestWinRate.name}#${highestWinRate.tag}</strong>
+          <small>${highestWinRate.avgWinRate}% WR • ${highestWinRate.region}</small>
+        </div>
+        <div class="summary-card">
+          <span>Highest KDA</span>
+          <strong>${highestKda.name}#${highestKda.tag}</strong>
+          <small>${highestKda.avgKda} KDA • ${highestKda.region}</small>
+        </div>
+      `;
+    }
+
+    function renderPodium(data) {
+      const podium = document.getElementById("podiumSection");
+
+      if (!data.length) {
+        podium.innerHTML = "";
+        return;
+      }
+
+      const topThree = data.slice(0, 3);
+      const first = topThree[0];
+      const second = topThree[1];
+      const third = topThree[2];
+
+      podium.innerHTML = `
+        <div class="podium-grid">
+          ${second ? `
+            <div class="podium-card podium-second">
+              <div class="podium-place">🥈 #2</div>
+              <img src="${getPlayerAvatar(second.name)}" alt="${second.name}" class="podium-avatar" />
+              <h3>${second.name}#${second.tag}</h3>
+              <p>${second.region}</p>
+              <small>${second.avgWinRate}% WR • ${second.avgKda} KDA</small>
+            </div>
+          ` : ""}
+
+          ${first ? `
+            <div class="podium-card podium-first">
+              <div class="podium-place">🥇 #1</div>
+              <img src="${getPlayerAvatar(first.name)}" alt="${first.name}" class="podium-avatar podium-avatar-large" />
+              <h3>${first.name}#${first.tag}</h3>
+              <p>${first.region}</p>
+              <small>${first.avgWinRate}% WR • ${first.avgKda} KDA • ${first.totalMatches} matches</small>
+            </div>
+          ` : ""}
+
+          ${third ? `
+            <div class="podium-card podium-third">
+              <div class="podium-place">🥉 #3</div>
+              <img src="${getPlayerAvatar(third.name)}" alt="${third.name}" class="podium-avatar" />
+              <h3>${third.name}#${third.tag}</h3>
+              <p>${third.region}</p>
+              <small>${third.avgWinRate}% WR • ${third.avgKda} KDA</small>
+            </div>
+          ` : ""}
+        </div>
+      `;
+    }
+
+    function renderLeaderboard() {
+      const container = document.getElementById("leaderboard");
+
+      if (!filteredData.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <h2>No players found</h2>
+            <p>Your current filters returned no matching results.</p>
+            <div class="empty-hint">Try another region or lower min matches.</div>
+          </div>
+        `;
+        return;
+      }
+
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const paginated = filteredData.slice(start, end);
+
+      container.innerHTML = `
+        <table>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Best Agent</th>
+            <th>Region</th>
+            <th>Avg Win Rate</th>
+            <th>Avg KDA</th>
+            <th>Total Matches</th>
+          </tr>
+          ${paginated.map((item, index) => {
+            const displayRank = start + index + 1;
+            return `
+              <tr>
+                <td>
+                  <span class="rank-badge rank-${displayRank}">
+                    ${getRankDisplay(displayRank)}
+                  </span>
+                </td>
+                <td>
+                  <div class="player-hover-wrap">
+                    <a class="player-link player-link-row" href="player.html?name=${encodeURIComponent(item.name)}&tag=${encodeURIComponent(item.tag)}">
+                      <img src="${getPlayerAvatar(item.name)}" alt="${item.name}" class="player-avatar" />
+                      <span>${item.name}#${item.tag}</span>
+                    </a>
+                  </div>
+                </td>
+                <td>
+                  <div class="agent-cell">
+                    <img src="${getAgentImage(item.bestAgent)}" class="agent-icon-small" alt="${item.bestAgent}" />
+                    ${item.bestAgent}
+                  </div>
+                </td>
+                <td>${item.region}</td>
+                <td>${item.avgWinRate}%</td>
+                <td>${item.avgKda}</td>
+                <td>${item.totalMatches}</td>
+              </tr>
+            `;
+          }).join("")}
+        </table>
+      `;
+    }
+
+    function updatePagination() {
+      const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
+      document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById("prevBtn").disabled = currentPage === 1;
+      document.getElementById("nextBtn").disabled = currentPage === totalPages;
+    }
+
+    function applyFilters() {
+      const region = document.getElementById("regionFilter").value;
+      const minMatches = Number(document.getElementById("minMatchesFilter").value) || 0;
+
+      filteredData = [...originalData];
+
+      if (region !== "ALL") {
+        filteredData = filteredData.filter(item => item.region === region);
+      }
+
+      filteredData = filteredData.filter(item => item.totalMatches >= minMatches);
+
+      applySortOnly();
+
+      currentPage = 1;
+      updateSummaryCards(filteredData);
+      renderPodium(filteredData);
+      renderLeaderboard();
+      updatePagination();
+    }
+
+    document.getElementById("applyFiltersBtn").addEventListener("click", applyFilters);
+
+    document.getElementById("prevBtn").addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderLeaderboard();
+        updatePagination();
+      }
+    });
+
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderLeaderboard();
+        updatePagination();
+      }
+    });
+
+    loadLeaderboard();
+  </script>
+</body>
+</html>

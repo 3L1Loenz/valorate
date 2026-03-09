@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compare Players</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <img src="images/valorate-logo.png" class="brand-logo" alt="ValoRate Logo" />
+      </a>
+
+      <nav class="main-nav">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="leaderboard.html?agent=Jett">Leaderboard</a>
+        <a href="compare.html">Compare</a>
+      </nav>
+
+      <a href="index.html#searchSection" class="search-cta">Search Player</a>
+    </div>
+  </header>
+
+  <div class="container page-wrapper">
+    <div class="page-header">
+      <p>Compare two players side by side.</p>
+    </div>
+
+    <div class="panel">
+      <div class="compare-form modern-compare-form">
+        <div class="compare-input-group">
+          <label for="playerOneInput">Player One</label>
+          <input type="text" id="playerOneInput" placeholder="Ace#EU1" />
+        </div>
+
+        <div class="compare-vs">VS</div>
+
+        <div class="compare-input-group">
+          <label for="playerTwoInput">Player Two</label>
+          <input type="text" id="playerTwoInput" placeholder="Shadow#NA1" />
+        </div>
+
+        <button class="compare-submit-btn" onclick="comparePlayers()">Compare Players</button>
+      </div>
+    </div>
+
+    <div id="compareResult" class="compare-result"></div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <h3>ValoRate</h3>
+        <p>Global VALORANT agent leaderboards, player profiles, and comparisons.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="compare.html">Compare</a>
+        <a href="leaderboard.html?agent=Jett">Leaderboard</a>
+      </div>
+    </div>
+
+    <div class="footer-disclaimer">
+      ValoRate is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing VALORANT. VALORANT and Riot Games are trademarks or registered trademarks of Riot Games, Inc.
+    </div>
+  </footer>
+
+  <script>
+    const API_URL = "http://localhost:3000";
+
+    function getAgentImage(agentName) {
+      return `images/agents/${agentName.toLowerCase()}.png`;
+    }
+
+    function parseRiotId(riotId) {
+      if (!riotId.includes("#")) return null;
+
+      const parts = riotId.split("#");
+      const name = parts[0].trim();
+      const tag = parts[1].trim();
+
+      if (!name || !tag) return null;
+
+      return { name, tag };
+    }
+
+    function getTopAgent(stats) {
+      return [...stats].sort((a, b) => a.worldRank - b.worldRank)[0];
+    }
+
+    function getAverageWinRate(stats) {
+      return (stats.reduce((sum, item) => sum + item.winRate, 0) / stats.length).toFixed(1);
+    }
+
+    function getAverageKda(stats) {
+      return (stats.reduce((sum, item) => sum + item.kda, 0) / stats.length).toFixed(2);
+    }
+
+    function getTotalMatches(stats) {
+      return stats.reduce((sum, item) => sum + item.matches, 0);
+    }
+
+    async function fetchPlayer(name, tag) {
+      const response = await fetch(`${API_URL}/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
+      return await response.json();
+    }
+
+    async function comparePlayers() {
+      const playerOneRaw = document.getElementById("playerOneInput").value.trim();
+      const playerTwoRaw = document.getElementById("playerTwoInput").value.trim();
+      const resultBox = document.getElementById("compareResult");
+
+      const playerOneParsed = parseRiotId(playerOneRaw);
+      const playerTwoParsed = parseRiotId(playerTwoRaw);
+
+      if (!playerOneParsed || !playerTwoParsed) {
+        resultBox.innerHTML = `
+          <div class="panel">
+            <div class="empty-state">
+              <h2>Invalid Riot ID</h2>
+              <p>Please enter both players in this format: Name#TAG</p>
+              <div class="empty-hint">Example: Ace#EU1</div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const playerOne = await fetchPlayer(playerOneParsed.name, playerOneParsed.tag);
+      const playerTwo = await fetchPlayer(playerTwoParsed.name, playerTwoParsed.tag);
+
+      if (playerOne.error || playerTwo.error) {
+        resultBox.innerHTML = `
+          <div class="panel">
+            <div class="empty-state">
+              <h2>Player not found</h2>
+              <p>Check the Riot IDs and try again.</p>
+              <div class="empty-hint">Try Ace#EU1 vs Shadow#NA1</div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const topOne = getTopAgent(playerOne.stats);
+      const topTwo = getTopAgent(playerTwo.stats);
+
+      resultBox.innerHTML = `
+        <div class="compare-grid">
+          <div class="panel compare-player-card">
+            <h2>${playerOne.name}#${playerOne.tag}</h2>
+            <p>${playerOne.region} • ${playerOne.rank}</p>
+
+            <div class="best-agent-highlight">
+              <img src="${getAgentImage(topOne.agent)}" alt="${topOne.agent}" class="best-agent-image" />
+              <div>
+                <span class="mini-label">Best Agent</span>
+                <h3>${topOne.agent}</h3>
+                <p>#${topOne.worldRank} • ${topOne.winRate}% WR • ${topOne.kda} KDA</p>
+              </div>
+            </div>
+
+            <div class="stat-grid">
+              <div class="stat-card">
+                <span>Average Win Rate</span>
+                <strong>${getAverageWinRate(playerOne.stats)}%</strong>
+              </div>
+              <div class="stat-card">
+                <span>Average KDA</span>
+                <strong>${getAverageKda(playerOne.stats)}</strong>
+              </div>
+              <div class="stat-card">
+                <span>Total Matches</span>
+                <strong>${getTotalMatches(playerOne.stats)}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel compare-player-card">
+            <h2>${playerTwo.name}#${playerTwo.tag}</h2>
+            <p>${playerTwo.region} • ${playerTwo.rank}</p>
+
+            <div class="best-agent-highlight">
+              <img src="${getAgentImage(topTwo.agent)}" alt="${topTwo.agent}" class="best-agent-image" />
+              <div>
+                <span class="mini-label">Best Agent</span>
+                <h3>${topTwo.agent}</h3>
+                <p>#${topTwo.worldRank} • ${topTwo.winRate}% WR • ${topTwo.kda} KDA</p>
+              </div>
+            </div>
+
+            <div class="stat-grid">
+              <div class="stat-card">
+                <span>Average Win Rate</span>
+                <strong>${getAverageWinRate(playerTwo.stats)}%</strong>
+              </div>
+              <div class="stat-card">
+                <span>Average KDA</span>
+                <strong>${getAverageKda(playerTwo.stats)}</strong>
+              </div>
+              <div class="stat-card">
+                <span>Total Matches</span>
+                <strong>${getTotalMatches(playerTwo.stats)}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Top Agent Comparison</h2>
+          <table>
+            <tr>
+              <th>Category</th>
+              <th>${playerOne.name}</th>
+              <th>${playerTwo.name}</th>
+            </tr>
+            <tr>
+              <td>Best Agent</td>
+              <td>${topOne.agent}</td>
+              <td>${topTwo.agent}</td>
+            </tr>
+            <tr>
+              <td>Best Agent Rank</td>
+              <td>#${topOne.worldRank}</td>
+              <td>#${topTwo.worldRank}</td>
+            </tr>
+            <tr>
+              <td>Best Agent Win Rate</td>
+              <td>${topOne.winRate}%</td>
+              <td>${topTwo.winRate}%</td>
+            </tr>
+            <tr>
+              <td>Best Agent KDA</td>
+              <td>${topOne.kda}</td>
+              <td>${topTwo.kda}</td>
+            </tr>
+            <tr>
+              <td>Best Agent Matches</td>
+              <td>${topOne.matches}</td>
+              <td>${topTwo.matches}</td>
+            </tr>
+          </table>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

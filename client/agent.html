@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Details</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <img src="images/valorate-logo.png" class="brand-logo" alt="ValoRate Logo" />
+      </a>
+
+      <nav class="main-nav">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a id="navLeaderboardLink" href="#">Leaderboard</a>
+        <a href="compare.html">Compare</a>
+      </nav>
+
+      <a href="index.html#searchSection" class="search-cta">Search Player</a>
+    </div>
+  </header>
+
+  <div class="container page-wrapper">
+    <div class="page-header">
+      <p>Agent overview and top player insights.</p>
+    </div>
+
+    <div class="panel">
+      <div class="agent-hero">
+        <img id="agentImage" class="agent-hero-image" src="" alt="" />
+        <div>
+          <h1 id="agentTitle">Agent</h1>
+          <p id="agentSubtitle">Detailed stats and top players worldwide.</p>
+        </div>
+      </div>
+
+      <div id="agentOverview" class="summary-grid"></div>
+
+      <div class="agent-actions">
+        <a id="openLeaderboardBtn" class="primary-link-btn" href="#">Open Full Leaderboard</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Top Players</h2>
+      <div id="topPlayers"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <h3>ValoRate</h3>
+        <p>Global VALORANT agent leaderboards, player profiles, and comparisons.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="compare.html">Compare</a>
+        <a href="leaderboard.html?agent=Jett">Leaderboard</a>
+      </div>
+    </div>
+
+    <div class="footer-disclaimer">
+      ValoRate is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing VALORANT. VALORANT and Riot Games are trademarks or registered trademarks of Riot Games, Inc.
+    </div>
+  </footer>
+
+  <script>
+    const API_URL = "http://localhost:3000";
+    const params = new URLSearchParams(window.location.search);
+    const agentName = params.get("name");
+
+    function getAgentImage(name) {
+      return `images/agents/${name.toLowerCase()}.png`;
+    }
+
+    function getPlayerAvatar(playerName) {
+      return `images/avatars/${playerName.toLowerCase()}.png`;
+    }
+
+    function getRankDisplay(rankNumber) {
+      if (rankNumber === 1) return "🥇 #1";
+      if (rankNumber === 2) return "🥈 #2";
+      if (rankNumber === 3) return "🥉 #3";
+      return `#${rankNumber}`;
+    }
+
+    async function loadAgentPage() {
+      try {
+        const response = await fetch(`${API_URL}/leaderboard/${encodeURIComponent(agentName)}`);
+        const data = await response.json();
+
+        document.getElementById("agentTitle").textContent = agentName;
+        document.getElementById("agentImage").src = getAgentImage(agentName);
+        document.getElementById("agentImage").alt = agentName;
+        document.getElementById("openLeaderboardBtn").href = `agent-leaderboard.html?agent=${encodeURIComponent(agentName)}`;
+        document.getElementById("navLeaderboardLink").href = `leaderboard.html?agent=${encodeURIComponent(agentName)}`;
+
+        if (!data.length) {
+          document.getElementById("agentOverview").innerHTML = `
+            <div class="empty-state">
+              <h2>No data found</h2>
+              <p>We don't have tracked stats for this agent yet.</p>
+              <div class="empty-hint">Try Jett, Reyna, or Clove</div>
+            </div>
+          `;
+          document.getElementById("topPlayers").innerHTML = "";
+          return;
+        }
+
+        const topPlayer = [...data].sort((a, b) => a.rank - b.rank)[0];
+        const averageWinRate = (data.reduce((sum, item) => sum + item.winRate, 0) / data.length).toFixed(1);
+        const averageKda = (data.reduce((sum, item) => sum + item.kda, 0) / data.length).toFixed(2);
+        const totalMatches = data.reduce((sum, item) => sum + item.matches, 0);
+
+        document.getElementById("agentOverview").innerHTML = `
+          <div class="summary-card">
+            <span>Top Player</span>
+            <strong>${topPlayer.player}</strong>
+            <small>${topPlayer.region} • #1 rank</small>
+          </div>
+
+          <div class="summary-card">
+            <span>Average Win Rate</span>
+            <strong>${averageWinRate}%</strong>
+            <small>Across tracked players</small>
+          </div>
+
+          <div class="summary-card">
+            <span>Average KDA</span>
+            <strong>${averageKda}</strong>
+            <small>Across tracked players</small>
+          </div>
+
+          <div class="summary-card">
+            <span>Total Tracked Matches</span>
+            <strong>${totalMatches}</strong>
+            <small>Combined from all listed players</small>
+          </div>
+        `;
+
+        const topFive = [...data].sort((a, b) => a.rank - b.rank).slice(0, 5);
+
+        document.getElementById("topPlayers").innerHTML = `
+          <table>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th>Region</th>
+              <th>Win Rate</th>
+              <th>KDA</th>
+              <th>Matches</th>
+            </tr>
+            ${topFive.map(item => `
+              <tr>
+                <td>
+                  <span class="rank-badge rank-${item.rank}">
+                    ${getRankDisplay(item.rank)}
+                  </span>
+                </td>
+                <td>
+                  <a class="player-link" href="player.html?name=${encodeURIComponent(item.player)}&tag=${encodeURIComponent(item.tag || "")}">
+                    ${item.player}${item.tag ? `#${item.tag}` : ""}
+                  </a>
+                </td>
+                <td>${item.region}</td>
+                <td>${item.winRate}%</td>
+                <td>${item.kda}</td>
+                <td>${item.matches}</td>
+              </tr>
+            `).join("")}
+          </table>
+        `;
+      } catch (error) {
+        document.getElementById("agentOverview").innerHTML = `
+          <div class="empty-state">
+            <h2>Agent page could not load</h2>
+            <p>There was a problem loading this agent page.</p>
+          </div>
+        `;
+      }
+    }
+
+    loadAgentPage();
+  </script>
+</body>
+</html>

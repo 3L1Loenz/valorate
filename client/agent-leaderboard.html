@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Leaderboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <img src="images/valorate-logo.png" class="brand-logo" alt="ValoRate Logo" />
+      </a>
+
+      <nav class="main-nav">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="compare.html">Compare</a>
+      </nav>
+
+      <a href="index.html#searchSection" class="search-cta">Search Player</a>
+    </div>
+  </header>
+
+  <div class="container page-wrapper">
+    <div class="page-header">
+      <p>Best players for a selected agent.</p>
+    </div>
+
+    <div class="panel">
+      <h1 id="title">Agent Leaderboard</h1>
+      <p id="subtitle">Top players for this agent worldwide.</p>
+
+      <div id="podiumSection" class="podium-section"></div>
+      <div id="summaryCards" class="summary-grid"></div>
+      <div id="leaderboard"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <h3>ValoRate</h3>
+        <p>Global VALORANT agent leaderboards, player profiles, and comparisons.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="compare.html">Compare</a>
+        <a href="leaderboard.html">Leaderboard</a>
+      </div>
+    </div>
+
+    <div class="footer-disclaimer">
+      ValoRate is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing VALORANT. VALORANT and Riot Games are trademarks or registered trademarks of Riot Games, Inc.
+    </div>
+  </footer>
+
+  <script>
+    const API_URL = "http://localhost:3000";
+    const params = new URLSearchParams(window.location.search);
+    const agent = params.get("agent");
+
+    function getPlayerAvatar(playerName) {
+      return `images/avatars/${playerName.toLowerCase()}.png`;
+    }
+
+    function getRankDisplay(rankNumber) {
+      if (rankNumber === 1) return "🥇 #1";
+      if (rankNumber === 2) return "🥈 #2";
+      if (rankNumber === 3) return "🥉 #3";
+      return `#${rankNumber}`;
+    }
+
+    document.getElementById("title").textContent = `Best ${agent} Players`;
+
+    async function loadAgentLeaderboard() {
+      const response = await fetch(`${API_URL}/leaderboard/${encodeURIComponent(agent)}`);
+      const data = await response.json();
+
+      if (!data.length) {
+        document.getElementById("leaderboard").innerHTML = `
+          <div class="empty-state">
+            <h2>No players found</h2>
+            <p>No leaderboard data exists for this agent yet.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const topPlayer = [...data].sort((a, b) => a.rank - b.rank)[0];
+      const highestWinRate = [...data].sort((a, b) => b.winRate - a.winRate)[0];
+      const mostMatches = [...data].sort((a, b) => b.matches - a.matches)[0];
+
+      document.getElementById("summaryCards").innerHTML = `
+        <div class="summary-card">
+          <span>#1 Player</span>
+          <strong>${topPlayer.player}</strong>
+          <small>${topPlayer.region} • ${topPlayer.winRate}% WR • ${topPlayer.kda} KDA</small>
+        </div>
+        <div class="summary-card">
+          <span>Highest Win Rate</span>
+          <strong>${highestWinRate.player}</strong>
+          <small>${highestWinRate.winRate}% WR • ${highestWinRate.region}</small>
+        </div>
+        <div class="summary-card">
+          <span>Most Matches</span>
+          <strong>${mostMatches.player}</strong>
+          <small>${mostMatches.matches} matches • ${mostMatches.region}</small>
+        </div>
+      `;
+
+      const topThree = [...data].sort((a, b) => a.rank - b.rank).slice(0, 3);
+      const first = topThree[0];
+      const second = topThree[1];
+      const third = topThree[2];
+
+      document.getElementById("podiumSection").innerHTML = `
+        <div class="podium-grid">
+          ${second ? `
+            <div class="podium-card podium-second">
+              <div class="podium-place">🥈 #2</div>
+              <img src="${getPlayerAvatar(second.player)}" alt="${second.player}" class="podium-avatar" />
+              <h3>${second.player}${second.tag ? `#${second.tag}` : ""}</h3>
+              <p>${second.region}</p>
+              <small>${second.winRate}% WR • ${second.kda} KDA</small>
+            </div>
+          ` : ""}
+
+          ${first ? `
+            <div class="podium-card podium-first">
+              <div class="podium-place">🥇 #1</div>
+              <img src="${getPlayerAvatar(first.player)}" alt="${first.player}" class="podium-avatar podium-avatar-large" />
+              <h3>${first.player}${first.tag ? `#${first.tag}` : ""}</h3>
+              <p>${first.region}</p>
+              <small>${first.winRate}% WR • ${first.kda} KDA • ${first.matches} matches</small>
+            </div>
+          ` : ""}
+
+          ${third ? `
+            <div class="podium-card podium-third">
+              <div class="podium-place">🥉 #3</div>
+              <img src="${getPlayerAvatar(third.player)}" alt="${third.player}" class="podium-avatar" />
+              <h3>${third.player}${third.tag ? `#${third.tag}` : ""}</h3>
+              <p>${third.region}</p>
+              <small>${third.winRate}% WR • ${third.kda} KDA</small>
+            </div>
+          ` : ""}
+        </div>
+      `;
+
+      document.getElementById("leaderboard").innerHTML = `
+        <table>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Region</th>
+            <th>Win Rate</th>
+            <th>KDA</th>
+            <th>Matches</th>
+          </tr>
+          ${data.sort((a, b) => a.rank - b.rank).map(item => `
+            <tr>
+              <td><span class="rank-badge rank-${item.rank}">${getRankDisplay(item.rank)}</span></td>
+              <td>
+                <a class="player-link" href="player.html?name=${encodeURIComponent(item.player)}&tag=${encodeURIComponent(item.tag || "")}">
+                  ${item.player}${item.tag ? `#${item.tag}` : ""}
+                </a>
+              </td>
+              <td>${item.region}</td>
+              <td>${item.winRate}%</td>
+              <td>${item.kda}</td>
+              <td>${item.matches}</td>
+            </tr>
+          `).join("")}
+        </table>
+      `;
+    }
+
+    loadAgentLeaderboard();
+  </script>
+</body>
+</html>

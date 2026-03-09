@@ -1,0 +1,122 @@
+[
+  {
+    "name": "Ace",
+    "tag": "EU1",
+    "bestAgent": "Jett",
+    "region": "EU",
+    "rank": "Immortal",
+    "stats": [
+      { "agent": "Jett", "winRate": 64, "kda": 1.42, "matches": 120, "worldRank": 1 },
+      { "agent": "Reyna", "winRate": 63, "kda": 1.41, "matches": 108, "worldRank": 2 },
+      { "agent": "Clove", "winRate": 56, "kda": 1.20, "matches": 85, "worldRank": 5 }
+    ]
+  },
+  {
+    "name": "Nova",
+    "tag": "EU1",
+    "bestAgent": "Clove",
+    "region": "EU",
+    "rank": "Radiant",
+    "stats": [
+      { "agent": "Clove", "winRate": 66, "kda": 1.38, "matches": 102, "worldRank": 1 },
+      { "agent": "Reyna", "winRate": 61, "kda": 1.38, "matches": 101, "worldRank": 3 },
+      { "agent": "Jett", "winRate": 58, "kda": 1.28, "matches": 105, "worldRank": 4 }
+    ]
+  },
+  {
+    "name": "Shadow",
+    "tag": "NA1",
+    "bestAgent": "Reyna",
+    "region": "NA",
+    "rank": "Radiant",
+    "stats": [
+      { "agent": "Reyna", "winRate": 65, "kda": 1.44, "matches": 115, "worldRank": 1 },
+      { "agent": "Jett", "winRate": 61, "kda": 1.35, "matches": 110, "worldRank": 2 },
+      { "agent": "Clove", "winRate": 57, "kda": 1.21, "matches": 90, "worldRank": 4 }
+    ]
+  },
+  {
+    "name": "Ghost",
+    "tag": "KR1",
+    "bestAgent": "Jett",
+    "region": "KR",
+    "rank": "Immortal",
+    "stats": [
+      { "agent": "Jett", "winRate": 59, "kda": 1.31, "matches": 98, "worldRank": 3 },
+      { "agent": "Reyna", "winRate": 57, "kda": 1.28, "matches": 87, "worldRank": 6 },
+      { "agent": "Clove", "winRate": 51, "kda": 1.12, "matches": 66, "worldRank": 10 }
+    ]
+  },
+  {
+    "name": "Vex",
+    "tag": "NA1",
+    "bestAgent": "Clove",
+    "region": "NA",
+    "rank": "Ascendant",
+    "stats": [
+      { "agent": "Clove", "winRate": 62, "kda": 1.29, "matches": 95, "worldRank": 2 },
+      { "agent": "Reyna", "winRate": 58, "kda": 1.31, "matches": 92, "worldRank": 5 },
+      { "agent": "Jett", "winRate": 57, "kda": 1.26, "matches": 87, "worldRank": 5 }
+    ]
+  },
+  {
+    "name": "Kiro",
+    "tag": "KR1",
+    "bestAgent": "Reyna",
+    "region": "KR",
+    "rank": "Immortal",
+    "stats": [
+      { "agent": "Reyna", "winRate": 56, "kda": 1.26, "matches": 82, "worldRank": 7 },
+      { "agent": "Jett", "winRate": 56, "kda": 1.24, "matches": 82, "worldRank": 6 },
+      { "agent": "Clove", "winRate": 55, "kda": 1.18, "matches": 82, "worldRank": 6 }
+    ]
+  },
+  {
+    "name": "Blaze",
+    "tag": "EU1",
+    "bestAgent": "Reyna",
+    "region": "EU",
+    "rank": "Ascendant",
+    "stats": [
+      { "agent": "Reyna", "winRate": 59, "kda": 1.33, "matches": 96, "worldRank": 4 },
+      { "agent": "Clove", "winRate": 54, "kda": 1.17, "matches": 79, "worldRank": 7 },
+      { "agent": "Jett", "winRate": 55, "kda": 1.21, "matches": 76, "worldRank": 7 }
+    ]
+  },
+  {
+    "name": "Drift",
+    "tag": "EU1",
+    "bestAgent": "Reyna",
+    "region": "EU",
+    "rank": "Diamond",
+    "stats": [
+      { "agent": "Reyna", "winRate": 55, "kda": 1.24, "matches": 79, "worldRank": 8 },
+      { "agent": "Clove", "winRate": 53, "kda": 1.15, "matches": 73, "worldRank": 8 },
+      { "agent": "Jett", "winRate": 53, "kda": 1.18, "matches": 69, "worldRank": 9 }
+    ]
+  },
+  {
+    "name": "Zeru",
+    "tag": "NA1",
+    "bestAgent": "Jett",
+    "region": "NA",
+    "rank": "Diamond",
+    "stats": [
+      { "agent": "Jett", "winRate": 54, "kda": 1.20, "matches": 72, "worldRank": 8 },
+      { "agent": "Reyna", "winRate": 54, "kda": 1.22, "matches": 75, "worldRank": 9 },
+      { "agent": "Clove", "winRate": 52, "kda": 1.14, "matches": 70, "worldRank": 9 }
+    ]
+  },
+  {
+    "name": "RiotX",
+    "tag": "AP1",
+    "bestAgent": "Clove",
+    "region": "AP",
+    "rank": "Ascendant",
+    "stats": [
+      { "agent": "Clove", "winRate": 58, "kda": 1.24, "matches": 88, "worldRank": 3 },
+      { "agent": "Reyna", "winRate": 53, "kda": 1.20, "matches": 70, "worldRank": 10 },
+      { "agent": "Jett", "winRate": 52, "kda": 1.16, "matches": 65, "worldRank": 10 }
+    ]
+  }
+]

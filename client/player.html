@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Player Profile</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <img src="images/valorate-logo.png" class="brand-logo" alt="ValoRate Logo" />
+      </a>
+
+      <nav class="main-nav">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a id="navLeaderboardLink" href="#">Leaderboard</a>
+        <a href="compare.html">Compare</a>
+      </nav>
+
+      <a href="index.html#searchSection" class="search-cta">Search Player</a>
+    </div>
+  </header>
+
+  <div class="container page-wrapper">
+    <div class="page-header">
+      <p>Player overview, strongest agent, and tracked performance.</p>
+    </div>
+
+    <div class="panel">
+      <div id="playerHero"></div>
+      <div id="bestAgentHighlight"></div>
+      <div id="topAgentsCards" class="summary-grid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>All Agent Stats</h2>
+      <div id="playerTable"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <h3>ValoRate</h3>
+        <p>Global VALORANT agent leaderboards, player profiles, and comparisons.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="compare.html">Compare</a>
+        <a href="leaderboard.html?agent=Jett">Leaderboard</a>
+      </div>
+    </div>
+
+    <div class="footer-disclaimer">
+      ValoRate is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing VALORANT. VALORANT and Riot Games are trademarks or registered trademarks of Riot Games, Inc.
+    </div>
+  </footer>
+
+  <script>
+    const API_URL = "http://localhost:3000";
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get("name");
+    const tag = params.get("tag");
+
+    function getAgentImage(agentName) {
+      return `images/agents/${agentName.toLowerCase()}.png`;
+    }
+
+    async function loadPlayer() {
+      const response = await fetch(`${API_URL}/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
+      const data = await response.json();
+
+      const playerHero = document.getElementById("playerHero");
+      const bestAgentHighlight = document.getElementById("bestAgentHighlight");
+      const topAgentsCards = document.getElementById("topAgentsCards");
+      const playerTable = document.getElementById("playerTable");
+      const navLeaderboardLink = document.getElementById("navLeaderboardLink");
+
+      if (data.error) {
+        playerHero.innerHTML = `
+          <div class="empty-state">
+            <h2>Player not found</h2>
+            <p>We couldn't find a tracked profile for that Riot ID.</p>
+            <div class="empty-hint">Try: Ace#EU1</div>
+            <br />
+            <a class="empty-action" href="index.html">Back to Home</a>
+          </div>
+        `;
+        bestAgentHighlight.innerHTML = "";
+        topAgentsCards.innerHTML = "";
+        playerTable.innerHTML = "";
+        return;
+      }
+
+      const sortedStats = [...data.stats].sort((a, b) => a.worldRank - b.worldRank);
+      const bestAgent = sortedStats[0];
+      const topThree = sortedStats.slice(0, 3);
+
+      navLeaderboardLink.href = `leaderboard.html?agent=${encodeURIComponent(bestAgent.agent)}`;
+
+      playerHero.innerHTML = `
+        <div class="player-hero">
+          <div>
+            <h1>${data.name}#${data.tag}</h1>
+            <p>${data.region} • ${data.rank}</p>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <span>Best Agent</span>
+            <strong>${data.bestAgent}</strong>
+          </div>
+          <div class="stat-card">
+            <span>Region</span>
+            <strong>${data.region}</strong>
+          </div>
+          <div class="stat-card">
+            <span>Rank</span>
+            <strong>${data.rank}</strong>
+          </div>
+          <div class="stat-card">
+            <span>Tracked Agents</span>
+            <strong>${data.stats.length}</strong>
+          </div>
+        </div>
+      `;
+
+      bestAgentHighlight.innerHTML = `
+        <div class="best-agent-highlight">
+          <img src="${getAgentImage(bestAgent.agent)}" alt="${bestAgent.agent}" class="best-agent-image" />
+          <div>
+            <span class="mini-label">Top Performing Agent</span>
+            <h2>${bestAgent.agent}</h2>
+            <p>
+              World Rank #${bestAgent.worldRank} • ${bestAgent.winRate}% Win Rate •
+              ${bestAgent.kda} KDA • ${bestAgent.matches} Matches
+            </p>
+            <a class="primary-link-btn" href="agent.html?name=${encodeURIComponent(bestAgent.agent)}">
+              Open ${bestAgent.agent} Page
+            </a>
+          </div>
+        </div>
+      `;
+
+      topAgentsCards.innerHTML = topThree.map(item => `
+        <div class="summary-card">
+          <span>${item.agent}</span>
+          <strong>#${item.worldRank}</strong>
+          <small>${item.winRate}% WR • ${item.kda} KDA • ${item.matches} matches</small>
+        </div>
+      `).join("");
+
+      playerTable.innerHTML = `
+        <table>
+          <tr>
+            <th>Agent</th>
+            <th>Win Rate</th>
+            <th>KDA</th>
+            <th>Matches</th>
+            <th>World Rank</th>
+          </tr>
+          ${sortedStats.map(item => `
+            <tr>
+              <td>${item.agent}</td>
+              <td>${item.winRate}%</td>
+              <td>${item.kda}</td>
+              <td>${item.matches}</td>
+              <td>#${item.worldRank}</td>
+            </tr>
+          `).join("")}
+        </table>
+      `;
+    }
+
+    loadPlayer();
+  </script>
+</body>
+</html>
