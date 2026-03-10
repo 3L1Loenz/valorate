@@ -5,6 +5,9 @@ const cors = require("cors");
 const path = require("path");
 const axios = require("axios");
 
+const seasonCache = new Map();
+const CACHE_TTL = 1000 * 60 * 10; // 10 dakika
+
 const app = express();
 
 app.use(cors());
@@ -222,7 +225,9 @@ app.get("/live-matches/:region/:name/:tag", async (req, res) => {
 app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
   try {
     if (!HENRIK_API_KEY) {
-      return res.status(500).json({ error: "Henrik API key missing" });
+      return res.status(500).json({
+        error: "Henrik API key missing"
+      });
     }
 
     const { region, name, tag } = req.params;
@@ -230,7 +235,16 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
 
     const allowedRegions = ["eu", "na", "ap", "kr", "latam", "br"];
     if (!allowedRegions.includes(normalizedRegion)) {
-      return res.status(400).json({ error: "Invalid region" });
+      return res.status(400).json({
+        error: "Invalid region"
+      });
+    }
+
+    const cacheKey = `${normalizedRegion}:${name}:${tag}`;
+    const cached = seasonCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return res.json(cached.data);
     }
 
     const headers = {
@@ -244,21 +258,26 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
     );
 
     const account = accountResponse.data?.data;
-    const puuid = account?.puuid;
 
-    if (!puuid) {
-      return res.status(404).json({ error: "Player PUUID not found" });
+    if (!account?.puuid) {
+      return res.status(404).json({
+        error: "Player PUUID not found"
+      });
     }
+
+    const puuid = account.puuid;
 
     // 2) v4 matches pagination
     let allMatches = [];
     let start = 0;
     const size = 10;
+    const MAX_PAGES = 5; // en fazla 50 maç çek
     let currentSeasonId = null;
     let currentSeasonShort = null;
     let reachedOlderSeason = false;
+    let pageCount = 0;
 
-    while (!reachedOlderSeason) {
+    while (!reachedOlderSeason && pageCount < MAX_PAGES) {
       const matchesResponse = await axios.get(
         `https://api.henrikdev.xyz/valorant/v4/by-puuid/matches/${normalizedRegion}/pc/${encodeURIComponent(puuid)}?mode=competitive&size=${size}&start=${start}`,
         { headers }
@@ -268,7 +287,6 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
 
       if (!pageMatches.length) break;
 
-      // İlk batch'te mevcut sezonu belirle
       if (!currentSeasonId) {
         currentSeasonId = pageMatches[0]?.meta?.season?.id || null;
         currentSeasonShort = pageMatches[0]?.meta?.season?.short || null;
@@ -288,12 +306,13 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
       if (pageMatches.length < size) break;
 
       start += size;
+      pageCount += 1;
     }
 
     const seasonMatches = allMatches;
 
     if (!seasonMatches.length) {
-      return res.json({
+      const emptyPayload = {
         season: null,
         totalMatches: 0,
         summary: {
@@ -305,7 +324,14 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
         },
         agents: [],
         recentMatches: []
+      };
+
+      seasonCache.set(cacheKey, {
+        timestamp: Date.now(),
+        data: emptyPayload
       });
+
+      return res.json(emptyPayload);
     }
 
     let totalKills = 0;
@@ -318,9 +344,9 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
     seasonMatches.forEach((match) => {
       const stats = match.stats || {};
 
-      const kills = stats.kills || 0;
-      const deaths = stats.deaths || 0;
-      const assists = stats.assists || 0;
+      const kills = Number(stats.kills || 0);
+      const deaths = Number(stats.deaths || 0);
+      const assists = Number(stats.assists || 0);
 
       const playerTeam = String(stats.team || "").toLowerCase().trim();
 
@@ -349,6 +375,7 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
       totalKills += kills;
       totalDeaths += deaths;
       totalAssists += assists;
+
       if (won) totalWins += 1;
 
       const agent = stats.character?.name || "Unknown";
@@ -368,7 +395,10 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
       agentMap[agent].kills += kills;
       agentMap[agent].deaths += deaths;
       agentMap[agent].assists += assists;
-      if (won) agentMap[agent].wins += 1;
+
+      if (won) {
+        agentMap[agent].wins += 1;
+      }
     });
 
     const totalMatches = seasonMatches.length;
@@ -394,10 +424,7 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
       }))
       .sort((a, b) => b.matches - a.matches);
 
-    console.log("CURRENT SEASON ID:", currentSeasonId);
-    console.log("CURRENT SEASON MATCHES FROM V4:", seasonMatches.length);
-
-    res.json({
+    const payload = {
       season: {
         id: currentSeasonId,
         short: currentSeasonShort
@@ -406,7 +433,19 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
       summary,
       agents,
       recentMatches: seasonMatches
+    };
+
+    console.log("CACHE KEY:", cacheKey);
+    console.log("PAGES FETCHED:", pageCount);
+    console.log("CURRENT SEASON ID:", currentSeasonId);
+    console.log("CURRENT SEASON MATCHES:", totalMatches);
+
+    seasonCache.set(cacheKey, {
+      timestamp: Date.now(),
+      data: payload
     });
+
+    res.json(payload);
   } catch (error) {
     console.error("Season stats error:", error.response?.data || error.message);
 
@@ -416,7 +455,6 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
     });
   }
 });
-
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

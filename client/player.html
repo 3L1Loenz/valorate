@@ -450,17 +450,28 @@ currentMatchIndex = 0;
 
 } 
   } catch (error) {
-    console.error("loadLivePlayer error:", error);
-    playerHero.innerHTML = `
-      <div class="empty-state">
-        <h2>Error loading player</h2>
-        <p>Check console logs.</p>
-      </div>
-    `;
-    bestAgentHighlight.innerHTML = "";
-    topAgentsCards.innerHTML = "";
-    playerTable.innerHTML = "";
-  }
+  console.error("loadLivePlayer error:", error);
+
+  playerHero.innerHTML = `
+    <div class="empty-state">
+      <h2>Rate limit reached</h2>
+      <p>The live stats provider is temporarily rate-limiting requests.</p>
+      <div class="empty-hint">Please wait a bit and try again.</div>
+    </div>
+  `;
+
+  bestAgentHighlight.innerHTML = "";
+  topAgentsCards.innerHTML = "";
+  playerTable.innerHTML = "";
+
+  const agentPerformanceGrid = document.getElementById("agentPerformanceGrid");
+  const recentMatchesGrid = document.getElementById("recentMatchesGrid");
+  const btn = document.getElementById("showMoreBtn");
+
+  if (agentPerformanceGrid) agentPerformanceGrid.innerHTML = "";
+  if (recentMatchesGrid) recentMatchesGrid.innerHTML = "";
+  if (btn) btn.style.display = "none";
+}
 }
 function renderMoreMatches() {
 
