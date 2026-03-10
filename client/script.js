@@ -226,50 +226,6 @@ function getRankClass(rank) {
   return "";
 }
 
-function getRecentSearches() {
-  const saved = localStorage.getItem("valorateRecentSearches");
-  return saved ? JSON.parse(saved) : [];
-}
-
-function saveRecentSearch(riotId) {
-  let recent = getRecentSearches();
-
-  recent = recent.filter((item) => item.toLowerCase() !== riotId.toLowerCase());
-  recent.unshift(riotId);
-
-  if (recent.length > 5) {
-    recent = recent.slice(0, 5);
-  }
-
-  localStorage.setItem("valorateRecentSearches", JSON.stringify(recent));
-}
-
-function renderRecentSearches() {
-  const list = document.getElementById("recentSearchesList");
-  const box = document.getElementById("recentSearchesBox");
-
-  if (!list || !box) return;
-
-  const recent = getRecentSearches();
-
-  if (!recent.length) {
-    box.style.display = "none";
-    list.innerHTML = "";
-    return;
-  }
-
-  box.style.display = "block";
-
-  list.innerHTML = recent.map((riotId) => {
-    const [name, tag] = riotId.split("#");
-    return `
-      <a class="recent-search-item" href="player.html?name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag || "")}">
-        ${riotId}
-      </a>
-    `;
-  }).join("");
-}
-
 async function loadPlayers() {
   try {
     const response = await fetch(`${API_URL}/players`);
@@ -342,9 +298,6 @@ function selectPlayer(player) {
     box.style.display = "none";
   }
 
-  saveRecentSearch(`${player.name}#${player.tag}`);
-  renderRecentSearches();
-
   window.location.href = `player.html?name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}`;
 }
 
@@ -408,24 +361,19 @@ function searchPlayer() {
   if (!riotId) return;
 
   if (!riotId.includes("#")) {
-    alert("Please enter Riot ID in this format: Name#TAG");
+    alert("Please enter Riot ID like Name#TAG");
     return;
   }
 
-  const parts = riotId.split("#");
-  const name = parts[0].trim();
-  const tag = parts[1].trim();
+  const [name, tag] = riotId.split("#");
 
   if (!name || !tag) {
     alert("Please enter a valid Riot ID like Ace#EU1");
     return;
   }
 
-  saveRecentSearch(`${name}#${tag}`);
-  renderRecentSearches();
-
   window.location.href =
-    `player.html?mode=live&region=${encodeURIComponent(region)}&name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`;
+    `player.html?mode=live&region=${encodeURIComponent(region)}&name=${encodeURIComponent(name.trim())}&tag=${encodeURIComponent(tag.trim())}`;
 }
 
 function setupAutocomplete() {
@@ -636,7 +584,7 @@ function renderLoggedInPlayer() {
         </div>
 
         <div class="my-rank-actions">
-          <a class="profile-btn" href="player.html?name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}">
+          <a class="profile-btn" href="player.html?mode=live&region=${encodeURIComponent((player.region || "eu").toLowerCase())}&name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}">
             Open My Profile
           </a>
           <button class="logout-btn" onclick="logoutPlayer()">Logout</button>
@@ -676,7 +624,6 @@ function renderLoggedInPlayer() {
 async function initApp() {
   await loadPlayers();
   await loadAgents();
-  renderRecentSearches();
   setupAutocomplete();
   renderLoggedInPlayer();
 }

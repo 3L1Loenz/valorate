@@ -458,6 +458,96 @@
           </tr>
         </table>
       `;
+      const agentPerformanceGrid = document.getElementById("agentPerformanceGrid");
+
+agentPerformanceGrid.innerHTML = agentPerformance.length
+  ? agentPerformance.map((agent) => {
+      const rankInfo = agentRanks.find((r) => r.agent === agent.agent);
+      const top100Badge =
+        rankInfo && rankInfo.rank && rankInfo.rank <= 100
+          ? `<div class="agent-rank-badge">Top #${rankInfo.rank} on ${agent.agent}</div>`
+          : "";
+
+      return `
+        <div class="summary-card">
+          <span>${agent.agent}</span>
+          <strong>${agent.winRate}% WR</strong>
+          <small>${agent.matches} matches • ${agent.kda} KDA</small>
+          ${top100Badge}
+        </div>
+      `;
+    }).join("")
+  : `
+      <div class="summary-card">
+        <span>No data</span>
+        <strong>-</strong>
+        <small>No recent live matches found</small>
+      </div>
+    `;
+    const recentMatchesGrid = document.getElementById("recentMatchesGrid");
+
+recentMatchesGrid.innerHTML = recentMatches.length
+  ? recentMatches.slice(0, 5).map((match) => {
+      const player = getPlayerFromMatch(match, accountName, accountTag);
+      if (!player) return "";
+
+      const result = formatMatchResult(
+        player.team,
+        match.teams?.red?.has_won,
+        match.teams?.blue?.has_won
+      );
+
+      const kills = player.stats?.kills || 0;
+      const deaths = player.stats?.deaths || 0;
+      const assists = player.stats?.assists || 0;
+      const kda = calculateKDA(kills, deaths, assists);
+
+      return `
+        <div class="match-card ${result.className}">
+          <div class="match-top">
+            <div>
+              <div class="match-result ${result.className}">${result.text}</div>
+              <div class="match-meta">
+                ${match.metadata?.map || "Unknown Map"} • ${player.character || "Unknown Agent"}
+              </div>
+            </div>
+
+            <div class="match-meta">
+              ${match.metadata?.mode || "Unknown Mode"}
+            </div>
+          </div>
+
+          <div class="match-stats">
+            <div class="match-stat-box">
+              <span>K / D / A</span>
+              <strong>${kills} / ${deaths} / ${assists}</strong>
+            </div>
+
+            <div class="match-stat-box">
+              <span>KDA</span>
+              <strong>${kda}</strong>
+            </div>
+
+            <div class="match-stat-box">
+              <span>Score</span>
+              <strong>${player.stats?.score || 0}</strong>
+            </div>
+
+            <div class="match-stat-box">
+              <span>Headshots</span>
+              <strong>${player.stats?.headshots || 0}</strong>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("")
+  : `
+      <div class="summary-card">
+        <span>No recent matches</span>
+        <strong>-</strong>
+        <small>Live match history could not be loaded</small>
+      </div>
+    `;
 
       if (agentPerformanceGrid) {
         agentPerformanceGrid.innerHTML = agentPerformance.length
@@ -497,7 +587,6 @@
                 match.teams?.red?.has_won,
                 match.teams?.blue?.has_won
               );
-
               const kills = player.stats?.kills || 0;
               const deaths = player.stats?.deaths || 0;
               const assists = player.stats?.assists || 0;
