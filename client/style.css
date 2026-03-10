@@ -1547,6 +1547,17 @@ padding-top:150px;
   color: #ff8b96;
   border: 1px solid rgba(255, 70, 85, 0.35);
 }
+.agent-rank-badge{
+
+background:#ff4655;
+color:white;
+font-size:12px;
+padding:4px 8px;
+border-radius:6px;
+margin-top:6px;
+display:inline-block;
+
+}
 
 .rank-iron { background: rgba(120, 120, 120, 0.18); color: #c9c9c9; }
 .rank-bronze { background: rgba(120, 78, 52, 0.22); color: #d6a27e; }

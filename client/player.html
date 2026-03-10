@@ -119,7 +119,6 @@
 
     return "";
   }
-
   function formatMMRChange(change) {
     if (change === null || change === undefined) {
       return {
@@ -152,320 +151,247 @@
     const safeDeaths = deaths > 0 ? deaths : 1;
     return ((kills + assists) / safeDeaths).toFixed(2);
   }
+  function calculateAgentScore(agent) {
+  const winRateWeight = 0.6;
+  const kdaWeight = 0.4;
 
-  function formatMatchResult(playerTeam, redWon, blueWon) {
-    if (!playerTeam) return { text: "Unknown", className: "loss" };
+  return (
+    Number(agent.winRate || 0) * winRateWeight +
+    Number(agent.kda || 0) * 20 * kdaWeight
+  );
+}
+async function findAgentLeaderboardRanks(agentPerformance) {
+  try {
+    const response = await fetch(`${API_URL}/players`);
+    const players = await response.json();
 
-    const isWin =
-      (playerTeam.toLowerCase() === "red" && redWon) ||
-      (playerTeam.toLowerCase() === "blue" && blueWon);
+    return agentPerformance.map((agent) => {
+      const rankingPool = players
+        .map((p) => {
+          const stat = p.stats?.find(
+            (s) => s.agent?.toLowerCase() === agent.agent.toLowerCase()
+          );
 
-    return {
-      text: isWin ? "Victory" : "Defeat",
-      className: isWin ? "win" : "loss"
-    };
-  }
+          if (!stat) return null;
 
-  function getPlayerFromMatch(match, accountName, accountTag) {
-    const allPlayers = match.players?.all_players || [];
+          return {
+            player: `${p.name}#${p.tag}`,
+            agent: stat.agent,
+            score: calculateAgentScore(stat)
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score);
 
-    return allPlayers.find(
-      (p) =>
-        p.name?.toLowerCase() === accountName.toLowerCase() &&
-        p.tag?.toLowerCase() === accountTag.toLowerCase()
-    );
-  }
-
-  function buildAgentStatsFromMatches(matches, accountName, accountTag) {
-    const agentMap = {};
-
-    matches.forEach((match) => {
-      const player = getPlayerFromMatch(match, accountName, accountTag);
-      if (!player) return;
-
-      const agentName = player.character || "Unknown";
-
-      if (!agentMap[agentName]) {
-        agentMap[agentName] = {
-          agent: agentName,
-          matches: 0,
-          wins: 0,
-          kills: 0,
-          deaths: 0,
-          assists: 0
-        };
-      }
-
-      agentMap[agentName].matches += 1;
-      agentMap[agentName].kills += player.stats?.kills || 0;
-      agentMap[agentName].deaths += player.stats?.deaths || 0;
-      agentMap[agentName].assists += player.stats?.assists || 0;
-
-      const result = formatMatchResult(
-        player.team,
-        match.teams?.red?.has_won,
-        match.teams?.blue?.has_won
+      const foundIndex = rankingPool.findIndex(
+        (p) => p.player.toLowerCase() === `${name}#${tag}`.toLowerCase()
       );
 
-      if (result.text === "Victory") {
-        agentMap[agentName].wins += 1;
-      }
+      return {
+        agent: agent.agent,
+        rank: foundIndex >= 0 ? foundIndex + 1 : null
+      };
     });
-
-    return Object.values(agentMap)
-      .map((item) => ({
-        ...item,
-        winRate: item.matches > 0 ? ((item.wins / item.matches) * 100).toFixed(1) : "0.0",
-        kda: calculateKDA(item.kills, item.deaths, item.assists)
-      }))
-      .sort((a, b) => b.matches - a.matches);
+  } catch (error) {
+    console.error("Agent leaderboard rank check failed:", error);
+    return [];
   }
-
-  async function findAgentLeaderboardRanks(agentPerformance) {
-    try {
-      const response = await fetch(`${API_URL}/players`);
-      const allPlayers = await response.json();
-
-      return agentPerformance.map((agentStat) => {
-        const rankingPool = allPlayers
-          .map((player) => {
-            const stat = player.stats?.find(
-              (s) => s.agent?.toLowerCase() === agentStat.agent.toLowerCase()
-            );
-
-            if (!stat) return null;
-
-            return {
-              player: `${player.name}#${player.tag}`,
-              agent: stat.agent,
-              worldRank: stat.worldRank
-            };
-          })
-          .filter(Boolean)
-          .sort((a, b) => a.worldRank - b.worldRank);
-
-        const found = rankingPool.find(
-          (item) => item.player.toLowerCase() === `${name}#${tag}`.toLowerCase()
-        );
-
-        return {
-          agent: agentStat.agent,
-          rank: found ? found.worldRank : null
-        };
-      });
-    } catch (error) {
-      console.error("Agent leaderboard rank check failed:", error);
-      return [];
+}
+async function loadLivePlayer() {
+  const playerHero = document.getElementById("playerHero");
+  const bestAgentHighlight = document.getElementById("bestAgentHighlight");
+  const topAgentsCards = document.getElementById("topAgentsCards");
+  const playerTable = document.getElementById("playerTable");
+  const agentPerformanceGrid = document.getElementById("agentPerformanceGrid");
+  const recentMatchesGrid = document.getElementById("recentMatchesGrid");
+  try {
+    const liveResponse = await fetch(
+      `${API_URL}/live-player/${encodeURIComponent(region)}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`
+    );
+    const liveData = await liveResponse.json();
+    const seasonResponse = await fetch(
+      `${API_URL}/live-season-stats/${encodeURIComponent(region)}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`
+    );
+    if (!seasonResponse.ok) {
+      const errorText = await seasonResponse.text();
+      console.error("SEASON FETCH ERROR:", errorText);
+      throw new Error(`Season stats request failed: ${seasonResponse.status}`);
     }
-  }
-
-  async function loadLivePlayer() {
-    const playerHero = document.getElementById("playerHero");
-    const bestAgentHighlight = document.getElementById("bestAgentHighlight");
-    const topAgentsCards = document.getElementById("topAgentsCards");
-    const playerTable = document.getElementById("playerTable");
-    const agentPerformanceGrid = document.getElementById("agentPerformanceGrid");
-    const recentMatchesGrid = document.getElementById("recentMatchesGrid");
-
-    try {
-      const response = await fetch(
-        `${API_URL}/live-player/${encodeURIComponent(region)}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`
-      );
-
-      const liveData = await response.json();
-
-      const matchesResponse = await fetch(
-        `${API_URL}/live-matches/${encodeURIComponent(region)}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`
-      );
-
-      if (!matchesResponse.ok) {
-        const errorText = await matchesResponse.text();
-        console.error("MATCHES FETCH ERROR:", errorText);
-        throw new Error(`Matches request failed: ${matchesResponse.status}`);
-      }
-
-      const matchesData = await matchesResponse.json();
-
-      console.log("LIVE DATA:", liveData);
-      console.log("ACCOUNT:", liveData.account);
-      console.log("MMR:", liveData.mmr);
-      console.log("MATCHES DATA:", matchesData);
-
-      if (liveData.error) {
-        playerHero.innerHTML = `
-          <div class="empty-state">
-            <h2>Live player not found</h2>
-            <p>We couldn't load this Riot account from the live API.</p>
-            <div class="empty-hint">Check Riot ID and region.</div>
-            <br />
-            <a class="empty-action" href="index.html">Back to Home</a>
-          </div>
-        `;
-        bestAgentHighlight.innerHTML = "";
-        topAgentsCards.innerHTML = "";
-        playerTable.innerHTML = "";
-        if (agentPerformanceGrid) agentPerformanceGrid.innerHTML = "";
-        if (recentMatchesGrid) recentMatchesGrid.innerHTML = "";
-        return;
-      }
-
-      const account = liveData.account?.data;
-      const mmr = liveData.mmr?.data;
-
-      const accountName = account?.name || name;
-      const accountTag = account?.tag || tag;
-      const accountRegion = account?.region?.toUpperCase() || region.toUpperCase();
-      const accountLevel = account?.account_level ?? "-";
-      const rankName = mmr?.current_data?.currenttierpatched || "Unranked";
-      const rr = mmr?.current_data?.ranking_in_tier ?? 0;
-      const cardImage =
-        account?.card?.large ||
-        account?.card?.small ||
-        account?.card?.wide ||
-        "images/valorate-logo.png";
-
-      const mmrChange = formatMMRChange(mmr?.current_data?.mmr_change_to_last_game);
-      const recentMatches = matchesData?.data || [];
-      const agentPerformance = buildAgentStatsFromMatches(recentMatches, accountName, accountTag);
-      const agentRanks = await findAgentLeaderboardRanks(agentPerformance);
-
+    const seasonData = await seasonResponse.json();
+    console.log("LIVE DATA:", liveData);
+    console.log("SEASON DATA:", seasonData);
+    if (liveData.error) {
       playerHero.innerHTML = `
-        <div class="player-hero">
-          <div>
-            <h1>${accountName}#${accountTag}</h1>
-            <p>
-              ${accountRegion} •
-              <span class="rank-pill ${getRankClass(rankName)}">${rankName}</span>
-              ${typeof rr === "number" ? `• ${rr} RR` : ""}
-            </p>
-          </div>
-        </div>
-
-        <div class="stat-grid">
-          <div class="stat-card">
-            <span>Account Level</span>
-            <strong>${accountLevel}</strong>
-          </div>
-          <div class="stat-card">
-            <span>Region</span>
-            <strong>${accountRegion}</strong>
-          </div>
-          <div class="stat-card">
-            <span>Current Rank</span>
-            <strong>${rankName}</strong>
-          </div>
-          <div class="stat-card">
-            <span>RR</span>
-            <strong>${rr}</strong>
-          </div>
+        <div class="empty-state">
+          <h2>Live player not found</h2>
+          <p>We couldn't load this Riot account from the live API.</p>
+          <div class="empty-hint">Check Riot ID and region.</div>
+          <br />
+          <a class="empty-action" href="index.html">Back to Home</a>
         </div>
       `;
-
-      bestAgentHighlight.innerHTML = `
-        <div class="live-profile-layout">
-          <div class="live-card-panel">
-            <img src="${cardImage}" alt="${accountName}" class="best-agent-image live-player-card-image" />
-          </div>
-
-          <div class="live-stats-panel">
-            <span class="mini-label">Live Account Overview</span>
-            <h2>${accountName}#${accountTag}</h2>
-
-            <div class="live-stats-grid">
-              <div class="live-stat-box">
-                <span>Current Rank</span>
-                <strong>${rankName}</strong>
-              </div>
-
-              <div class="live-stat-box">
-                <span>Current RR</span>
-                <strong>${rr}</strong>
-              </div>
-
-              <div class="live-stat-box">
-                <span>Peak Rank</span>
-                <strong>${mmr?.highest_rank?.patched_tier || "Unknown"}</strong>
-              </div>
-
-              <div class="live-stat-box">
-                <span>Account Level</span>
-                <strong>${accountLevel}</strong>
-              </div>
-
-              <div class="live-stat-box">
-                <span>Region</span>
-                <strong>${accountRegion}</strong>
-              </div>
-
-              <div class="live-stat-box">
-                <span>Last MMR Change</span>
-                <strong class="${mmrChange.className}">${mmrChange.text}</strong>
-              </div>
+      bestAgentHighlight.innerHTML = "";
+      topAgentsCards.innerHTML = "";
+      playerTable.innerHTML = "";
+      if (agentPerformanceGrid) agentPerformanceGrid.innerHTML = "";
+      if (recentMatchesGrid) recentMatchesGrid.innerHTML = "";
+      return;
+    }
+    const account = liveData.account?.data;
+    const mmr = liveData.mmr?.data;
+    const season = seasonData?.season;
+    const summary = seasonData?.summary || {};
+    const agentPerformance = seasonData?.agents || [];
+    const recentMatches = seasonData?.recentMatches || [];
+    const agentRanks = await findAgentLeaderboardRanks(agentPerformance);
+    const accountName = account?.name || name;
+    const accountTag = account?.tag || tag;
+    const accountRegion = account?.region?.toUpperCase() || region.toUpperCase();
+    const accountLevel = account?.account_level ?? "-";
+    const rankName = mmr?.current_data?.currenttierpatched || "Unranked";
+    const rr = mmr?.current_data?.ranking_in_tier ?? 0;
+    const cardImage =
+      account?.card?.large ||
+      account?.card?.small ||
+      account?.card?.wide ||
+      "images/valorate-logo.png";
+    const mmrChange = formatMMRChange(mmr?.current_data?.mmr_change_to_last_game);
+    playerHero.innerHTML = `
+      <div class="player-hero">
+        <div>
+          <h1>${accountName}#${accountTag}</h1>
+          <p>
+            ${accountRegion} •
+            <span class="rank-pill ${getRankClass(rankName)}">${rankName}</span>
+            ${typeof rr === "number" ? `• ${rr} RR` : ""}
+          </p>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span>Account Level</span>
+          <strong>${accountLevel}</strong>
+        </div>
+        <div class="stat-card">
+          <span>Region</span>
+          <strong>${accountRegion}</strong>
+        </div>
+        <div class="stat-card">
+          <span>Current Rank</span>
+          <strong>${rankName}</strong>
+        </div>
+        <div class="stat-card">
+          <span>RR</span>
+          <strong>${rr}</strong>
+        </div>
+      </div>
+    `;
+    bestAgentHighlight.innerHTML = `
+      <div class="live-profile-layout">
+        <div class="live-card-panel">
+          <img src="${cardImage}" alt="${accountName}" class="best-agent-image live-player-card-image" />
+        </div>
+        <div class="live-stats-panel">
+          <span class="mini-label">Current Season Overview</span>
+          <h2>${accountName}#${accountTag}</h2>
+          <div class="live-stats-grid">
+            <div class="live-stat-box">
+              <span>Current Rank</span>
+              <strong>${rankName}</strong>
+            </div>
+            <div class="live-stat-box">
+              <span>Current RR</span>
+              <strong>${rr}</strong>
+            </div>
+            <div class="live-stat-box">
+              <span>Peak Rank</span>
+              <strong>${mmr?.highest_rank?.patched_tier || "Unknown"}</strong>
+            </div>
+            <div class="live-stat-box">
+              <span>Account Level</span>
+              <strong>${accountLevel}</strong>
+            </div>
+            <div class="live-stat-box">
+              <span>Season</span>
+              <strong>${season?.short || "Unknown"}</strong>
+            </div>
+            <div class="live-stat-box">
+              <span>Last MMR Change</span>
+              <strong class="${mmrChange.className}">${mmrChange.text}</strong>
             </div>
           </div>
         </div>
-      `;
-
-      topAgentsCards.innerHTML = agentPerformance.length
-        ? agentPerformance.slice(0, 3).map((agent) => `
-            <div class="summary-card">
-              <span>${agent.agent}</span>
-              <strong>${agent.winRate}% WR</strong>
-              <small>${agent.matches} matches • ${agent.kda} KDA</small>
-            </div>
-          `).join("")
-        : `
-            <div class="summary-card">
-              <span>No agent stats</span>
-              <strong>-</strong>
-              <small>No recent live match data available</small>
-            </div>
-          `;
-
-      playerTable.innerHTML = `
-        <table>
-          <tr>
-            <th>Field</th>
-            <th>Value</th>
-          </tr>
-          <tr>
-            <td>Name</td>
-            <td>${accountName}</td>
-          </tr>
-          <tr>
-            <td>Tag</td>
-            <td>${accountTag}</td>
-          </tr>
-          <tr>
-            <td>Region</td>
-            <td>${accountRegion}</td>
-          </tr>
-          <tr>
-            <td>Account Level</td>
-            <td>${accountLevel}</td>
-          </tr>
-          <tr>
-            <td>Current Rank</td>
-            <td>${rankName}</td>
-          </tr>
-          <tr>
-            <td>RR</td>
-            <td>${rr}</td>
-          </tr>
-          <tr>
-            <td>Peak Rank</td>
-            <td>${mmr?.highest_rank?.patched_tier || "Unknown"}</td>
-          </tr>
-        </table>
-      `;
-      const agentPerformanceGrid = document.getElementById("agentPerformanceGrid");
-
-agentPerformanceGrid.innerHTML = agentPerformance.length
+      </div>
+    `;
+    topAgentsCards.innerHTML = `
+      <div class="summary-card">
+        <span>Season Win Rate</span>
+        <strong>${summary.winRate || "0.0"}%</strong>
+        <small>${seasonData?.totalMatches || 0} competitive matches</small>
+      </div>
+      <div class="summary-card">
+        <span>Season KDA</span>
+        <strong>${summary.kda || "0.00"}</strong>
+        <small>${summary.kills || 0} / ${summary.deaths || 0} / ${summary.assists || 0}</small>
+      </div>
+      <div class="summary-card">
+        <span>Best Season Agent</span>
+        <strong>${agentPerformance[0]?.agent || "Unknown"}</strong>
+        <small>${agentPerformance[0]?.winRate || "0.0"}% WR • ${agentPerformance[0]?.kda || "0.00"} KDA</small>
+      </div>
+    `;
+    playerTable.innerHTML = `
+      <table>
+        <tr>
+          <th>Field</th>
+          <th>Value</th>
+        </tr>
+        <tr>
+          <td>Name</td>
+          <td>${accountName}</td>
+        </tr>
+        <tr>
+          <td>Tag</td>
+          <td>${accountTag}</td>
+        </tr>
+        <tr>
+          <td>Region</td>
+          <td>${accountRegion}</td>
+        </tr>
+        <tr>
+          <td>Account Level</td>
+          <td>${accountLevel}</td>
+        </tr>
+        <tr>
+          <td>Current Rank</td>
+          <td>${rankName}</td>
+        </tr>
+        <tr>
+          <td>RR</td>
+          <td>${rr}</td>
+        </tr>
+        <tr>
+          <td>Peak Rank</td>
+          <td>${mmr?.highest_rank?.patched_tier || "Unknown"}</td>
+        </tr>
+        <tr>
+          <td>Season</td>
+          <td>${season?.short || "Unknown"}</td>
+        </tr>
+        <tr>
+          <td>Season Matches</td>
+          <td>${seasonData?.totalMatches || 0}</td>
+        </tr>
+      </table>
+    `;
+    if (agentPerformanceGrid) {
+      agentPerformanceGrid.innerHTML = agentPerformance.length
   ? agentPerformance.map((agent) => {
       const rankInfo = agentRanks.find((r) => r.agent === agent.agent);
+
       const top100Badge =
         rankInfo && rankInfo.rank && rankInfo.rank <= 100
-          ? `<div class="agent-rank-badge">Top #${rankInfo.rank} on ${agent.agent}</div>`
+          ? `<div class="agent-rank-badge">Top #${rankInfo.rank}</div>`
           : "";
 
       return `
@@ -477,183 +403,78 @@ agentPerformanceGrid.innerHTML = agentPerformance.length
         </div>
       `;
     }).join("")
-  : `
-      <div class="summary-card">
-        <span>No data</span>
-        <strong>-</strong>
-        <small>No recent live matches found</small>
-      </div>
-    `;
-    const recentMatchesGrid = document.getElementById("recentMatchesGrid");
-
-recentMatchesGrid.innerHTML = recentMatches.length
-  ? recentMatches.slice(0, 5).map((match) => {
-      const player = getPlayerFromMatch(match, accountName, accountTag);
-      if (!player) return "";
-
-      const result = formatMatchResult(
-        player.team,
-        match.teams?.red?.has_won,
-        match.teams?.blue?.has_won
-      );
-
-      const kills = player.stats?.kills || 0;
-      const deaths = player.stats?.deaths || 0;
-      const assists = player.stats?.assists || 0;
-      const kda = calculateKDA(kills, deaths, assists);
-
-      return `
-        <div class="match-card ${result.className}">
-          <div class="match-top">
-            <div>
-              <div class="match-result ${result.className}">${result.text}</div>
-              <div class="match-meta">
-                ${match.metadata?.map || "Unknown Map"} • ${player.character || "Unknown Agent"}
-              </div>
+        : `
+            <div class="summary-card">
+              <span>No data</span>
+              <strong>-</strong>
+              <small>No current season match data found</small>
             </div>
-
-            <div class="match-meta">
-              ${match.metadata?.mode || "Unknown Mode"}
-            </div>
-          </div>
-
-          <div class="match-stats">
-            <div class="match-stat-box">
-              <span>K / D / A</span>
-              <strong>${kills} / ${deaths} / ${assists}</strong>
-            </div>
-
-            <div class="match-stat-box">
-              <span>KDA</span>
-              <strong>${kda}</strong>
-            </div>
-
-            <div class="match-stat-box">
-              <span>Score</span>
-              <strong>${player.stats?.score || 0}</strong>
-            </div>
-
-            <div class="match-stat-box">
-              <span>Headshots</span>
-              <strong>${player.stats?.headshots || 0}</strong>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("")
-  : `
-      <div class="summary-card">
-        <span>No recent matches</span>
-        <strong>-</strong>
-        <small>Live match history could not be loaded</small>
-      </div>
-    `;
-
-      if (agentPerformanceGrid) {
-        agentPerformanceGrid.innerHTML = agentPerformance.length
-          ? agentPerformance.map((agent) => {
-              const rankInfo = agentRanks.find((r) => r.agent === agent.agent);
-              const top100Badge =
-                rankInfo && rankInfo.rank && rankInfo.rank <= 100
-                  ? `<div class="agent-rank-badge">Top #${rankInfo.rank} on ${agent.agent}</div>`
-                  : "";
-
-              return `
-                <div class="summary-card">
-                  <span>${agent.agent}</span>
-                  <strong>${agent.winRate}% WR</strong>
-                  <small>${agent.matches} matches • ${agent.kda} KDA</small>
-                  ${top100Badge}
-                </div>
-              `;
-            }).join("")
-          : `
-              <div class="summary-card">
-                <span>No data</span>
-                <strong>-</strong>
-                <small>No recent live matches found</small>
-              </div>
-            `;
-      }
-
-      if (recentMatchesGrid) {
-        recentMatchesGrid.innerHTML = recentMatches.length
-          ? recentMatches.slice(0, 5).map((match) => {
-              const player = getPlayerFromMatch(match, accountName, accountTag);
-              if (!player) return "";
-
-              const result = formatMatchResult(
-                player.team,
-                match.teams?.red?.has_won,
-                match.teams?.blue?.has_won
-              );
-              const kills = player.stats?.kills || 0;
-              const deaths = player.stats?.deaths || 0;
-              const assists = player.stats?.assists || 0;
-              const kda = calculateKDA(kills, deaths, assists);
-
-              return `
-                <div class="match-card ${result.className}">
-                  <div class="match-top">
-                    <div>
-                      <div class="match-result ${result.className}">${result.text}</div>
-                      <div class="match-meta">
-                        ${match.metadata?.map || "Unknown Map"} • ${player.character || "Unknown Agent"}
-                      </div>
-                    </div>
-
-                    <div class="match-meta">
-                      ${match.metadata?.mode || "Unknown Mode"}
-                    </div>
-                  </div>
-
-                  <div class="match-stats">
-                    <div class="match-stat-box">
-                      <span>K / D / A</span>
-                      <strong>${kills} / ${deaths} / ${assists}</strong>
-                    </div>
-
-                    <div class="match-stat-box">
-                      <span>KDA</span>
-                      <strong>${kda}</strong>
-                    </div>
-
-                    <div class="match-stat-box">
-                      <span>Score</span>
-                      <strong>${player.stats?.score || 0}</strong>
-                    </div>
-
-                    <div class="match-stat-box">
-                      <span>Headshots</span>
-                      <strong>${player.stats?.headshots || 0}</strong>
-                    </div>
-                  </div>
-                </div>
-              `;
-            }).join("")
-          : `
-              <div class="summary-card">
-                <span>No recent matches</span>
-                <strong>-</strong>
-                <small>Live match history could not be loaded</small>
-              </div>
-            `;
-      }
-    } catch (error) {
-      console.error("loadLivePlayer error:", error);
-
-      playerHero.innerHTML = `
-        <div class="empty-state">
-          <h2>Error loading player</h2>
-          <p>Check console logs.</p>
-        </div>
-      `;
-
-      bestAgentHighlight.innerHTML = "";
-      topAgentsCards.innerHTML = "";
-      playerTable.innerHTML = "";
+          `;
     }
+    if (recentMatchesGrid) {
+      recentMatchesGrid.innerHTML = recentMatches.length
+        ? recentMatches.slice(0, 10).map((match) => {
+            const kills = match.stats?.kills || 0;
+            const deaths = match.stats?.deaths || 0;
+            const assists = match.stats?.assists || 0;
+            const kda = calculateKDA(kills, deaths, assists);
+            const resultClass = match.stats?.won ? "win" : "loss";
+            const resultText = match.stats?.won ? "Victory" : "Defeat";
+            return `
+              <div class="match-card ${resultClass}">
+                <div class="match-top">
+                  <div>
+                    <div class="match-result ${resultClass}">${resultText}</div>
+                    <div class="match-meta">
+                      ${match.meta?.map?.name || "Unknown Map"} • ${match.stats?.character?.name || "Unknown Agent"}
+                    </div>
+                  </div>
+                  <div class="match-meta">
+                    ${match.meta?.mode || "Competitive"}
+                  </div>
+                </div>
+                <div class="match-stats">
+                  <div class="match-stat-box">
+                    <span>K / D / A</span>
+                    <strong>${kills} / ${deaths} / ${assists}</strong>
+                  </div>
+                  <div class="match-stat-box">
+                    <span>KDA</span>
+                    <strong>${kda}</strong>
+                  </div>
+                  <div class="match-stat-box">
+                    <span>Score</span>
+                    <strong>${match.stats?.score || 0}</strong>
+                  </div>
+                  <div class="match-stat-box">
+                    <span>Damage</span>
+                    <strong>${match.stats?.damage?.dealt || 0}</strong>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join("")
+        : `
+            <div class="summary-card">
+              <span>No recent matches</span>
+              <strong>-</strong>
+              <small>No current season matches found</small>
+            </div>
+          `;
+    }
+  } catch (error) {
+    console.error("loadLivePlayer error:", error);
+    playerHero.innerHTML = `
+      <div class="empty-state">
+        <h2>Error loading player</h2>
+        <p>Check console logs.</p>
+      </div>
+    `;
+    bestAgentHighlight.innerHTML = "";
+    topAgentsCards.innerHTML = "";
+    playerTable.innerHTML = "";
   }
+}
 
   async function loadPlayer() {
     const response = await fetch(`${API_URL}/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
