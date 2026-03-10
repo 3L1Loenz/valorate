@@ -320,13 +320,13 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
       const deaths = stats.deaths || 0;
       const assists = stats.assists || 0;
 
-      const playerTeam = (stats.team || "").toLowerCase();
-      const redWon = !!match.teams?.red?.has_won;
-      const blueWon = !!match.teams?.blue?.has_won;
+     const playerTeam = (stats.team || "").toLowerCase();
+const redScore = Number(match.teams?.red || 0);
+const blueScore = Number(match.teams?.blue || 0);
 
-      const won =
-        (playerTeam === "red" && redWon) ||
-        (playerTeam === "blue" && blueWon);
+const won =
+  (playerTeam === "red" && redScore > blueScore) ||
+  (playerTeam === "blue" && blueScore > redScore);
 
       totalKills += kills;
       totalDeaths += deaths;
