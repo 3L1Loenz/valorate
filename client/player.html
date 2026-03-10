@@ -227,6 +227,7 @@ async function loadLivePlayer() {
       throw new Error(`Season stats request failed: ${seasonResponse.status}`);
     }
     const seasonData = await seasonResponse.json();
+    console.log("TOTAL SEASON MATCHES:", allSeasonMatches.length);
     console.log("LIVE DATA:", liveData);
     console.log("SEASON DATA:", seasonData);
     if (liveData.error) {
@@ -463,6 +464,8 @@ currentMatchIndex = 0;
 }
 function renderMoreMatches() {
 
+  console.log("MATCH SAMPLE:", allSeasonMatches[0]);
+
   const recentMatchesGrid = document.getElementById("recentMatchesGrid");
 
   const nextMatches = allSeasonMatches.slice(
@@ -478,8 +481,16 @@ function renderMoreMatches() {
 
     const kda = calculateKDA(kills, deaths, assists);
 
-    const resultClass = match.stats?.won ? "win" : "loss";
-    const resultText = match.stats?.won ? "Victory" : "Defeat";
+    const playerTeam = match.stats?.team?.toLowerCase?.() || "";
+const redWon = !!match.teams?.red?.has_won;
+const blueWon = !!match.teams?.blue?.has_won;
+
+const isWin =
+  (playerTeam === "red" && redWon) ||
+  (playerTeam === "blue" && blueWon);
+
+const resultClass = isWin ? "win" : "loss";
+const resultText = isWin ? "Victory" : "Defeat";
 
     return `
       <div class="match-card ${resultClass}">
@@ -529,13 +540,10 @@ function renderMoreMatches() {
 
   currentMatchIndex += MATCHES_PER_LOAD;
 
-  if (currentMatchIndex >= allSeasonMatches.length) {
-
-    const btn = document.getElementById("showMoreBtn");
-
-    if (btn) btn.style.display = "none";
-
-  }
+  // if (currentMatchIndex >= allSeasonMatches.length) {
+//   const btn = document.getElementById("showMoreBtn");
+//   if (btn) btn.style.display = "none";
+// }
 
 }
   async function loadPlayer() {
