@@ -206,6 +206,7 @@ async function findAgentLeaderboardRanks(agentPerformance) {
 let currentMatchIndex = 0;
 const MATCHES_PER_LOAD = 10;
 let allSeasonMatches = [];
+
 async function loadLivePlayer() {
   const playerHero = document.getElementById("playerHero");
   const bestAgentHighlight = document.getElementById("bestAgentHighlight");
@@ -250,11 +251,12 @@ async function loadLivePlayer() {
     const account = liveData.account?.data;
     const mmr = liveData.mmr?.data;
     const season = seasonData?.season;
+const summary = seasonData?.summary || {};
+const agentPerformance = seasonData?.agents || [];
 allSeasonMatches = seasonData?.recentMatches || [];
 currentMatchIndex = 0;
 
-const agentPerformance = [];
-const agentRanks = [];
+const agentRanks = await findAgentLeaderboardRanks(agentPerformance);
     const accountName = account?.name || name;
     const accountTag = account?.tag || tag;
     const accountRegion = account?.region?.toUpperCase() || region.toUpperCase();
@@ -334,23 +336,21 @@ const agentRanks = [];
         </div>
       </div>
     `;
-   topAgentsCards.innerHTML = `
+  topAgentsCards.innerHTML = `
   <div class="summary-card">
-    <span>Season Matches Found</span>
-    <strong>${seasonData?.totalMatches || 0}</strong>
-    <small>Competitive matches returned by API</small>
+    <span>Season Win Rate</span>
+    <strong>${summary.winRate || "0.0"}%</strong>
+    <small>${seasonData?.totalMatches || 0} competitive matches</small>
   </div>
-
   <div class="summary-card">
-    <span>Season</span>
-    <strong>${season?.short || "Unknown"}</strong>
-    <small>Current detected season</small>
+    <span>Season KDA</span>
+    <strong>${summary.kda || "0.00"}</strong>
+    <small>${summary.kills || 0} / ${summary.deaths || 0} / ${summary.assists || 0}</small>
   </div>
-
   <div class="summary-card">
-    <span>Status</span>
-    <strong>Live</strong>
-    <small>Season match list loaded successfully</small>
+    <span>Best Season Agent</span>
+    <strong>${agentPerformance[0]?.agent || "Unknown"}</strong>
+    <small>${agentPerformance[0]?.winRate || "0.0"}% WR • ${agentPerformance[0]?.kda || "0.00"} KDA</small>
   </div>
 `;
     playerTable.innerHTML = `
@@ -392,19 +392,37 @@ const agentRanks = [];
       <td>${season?.short || "Unknown"}</td>
     </tr>
     <tr>
-      <td>Season Matches Found</td>
+      <td>Season Matches</td>
       <td>${seasonData?.totalMatches || 0}</td>
     </tr>
   </table>
 `;
     if (agentPerformanceGrid) {
-  agentPerformanceGrid.innerHTML = `
-    <div class="summary-card">
-      <span>Agent stats temporarily simplified</span>
-      <strong>Match list active</strong>
-      <small>We are currently using reliable season match data only</small>
-    </div>
-  `;
+  agentPerformanceGrid.innerHTML = agentPerformance.length
+    ? agentPerformance.map((agent) => {
+        const rankInfo = agentRanks.find((r) => r.agent === agent.agent);
+
+        const top100Badge =
+          rankInfo && rankInfo.rank && rankInfo.rank <= 100
+            ? `<div class="agent-rank-badge">Top #${rankInfo.rank}</div>`
+            : "";
+
+        return `
+          <div class="summary-card">
+            <span>${agent.agent}</span>
+            <strong>${agent.winRate}% WR</strong>
+            <small>${agent.matches} matches • ${agent.kda} KDA</small>
+            ${top100Badge}
+          </div>
+        `;
+      }).join("")
+    : `
+        <div class="summary-card">
+          <span>No data</span>
+          <strong>-</strong>
+          <small>No current season match data found</small>
+        </div>
+      `;
 }
   if (recentMatchesGrid) {
 
@@ -458,7 +476,6 @@ const agentRanks = [];
 }
 }
 function renderMoreMatches() {
-
   console.log("MATCH SAMPLE:", allSeasonMatches[0]);
 
   const recentMatchesGrid = document.getElementById("recentMatchesGrid");
@@ -469,20 +486,38 @@ function renderMoreMatches() {
   );
 
   const html = nextMatches.map((match) => {
+    const kills = match.stats?.kills || 0;
+    const deaths = match.stats?.deaths || 0;
+    const assists = match.stats?.assists || 0;
 
-    const kills = match.kills ?? "-";
-    const deaths = match.deaths ?? "-";
-    const assists = match.assists ?? "-";
+    const kda = calculateKDA(kills, deaths, assists);
 
-    const kda =
-      typeof match.kills === "number" &&
-      typeof match.deaths === "number" &&
-      typeof match.assists === "number"
-        ? calculateKDA(match.kills, match.deaths, match.assists)
-        : "-";
+    const playerTeam = String(match.stats?.team || "").toLowerCase().trim();
 
-    const resultClass = match.resultClass || "loss";
-    const resultText = match.result || "Defeat";
+    const redValue = match.teams?.red;
+    const blueValue = match.teams?.blue;
+
+    let redScore = 0;
+    let blueScore = 0;
+
+    if (typeof redValue === "number") {
+      redScore = redValue;
+    } else if (typeof redValue === "object" && redValue !== null) {
+      redScore = Number(redValue.rounds_won ?? redValue.score ?? redValue.value ?? 0);
+    }
+
+    if (typeof blueValue === "number") {
+      blueScore = blueValue;
+    } else if (typeof blueValue === "object" && blueValue !== null) {
+      blueScore = Number(blueValue.rounds_won ?? blueValue.score ?? blueValue.value ?? 0);
+    }
+
+    const isWin =
+      (playerTeam === "red" && redScore > blueScore) ||
+      (playerTeam === "blue" && blueScore > redScore);
+
+    const resultClass = isWin ? "win" : "loss";
+    const resultText = isWin ? "Victory" : "Defeat";
 
     return `
       <div class="match-card ${resultClass}">
@@ -490,19 +525,18 @@ function renderMoreMatches() {
           <div>
             <div class="match-result ${resultClass}">${resultText}</div>
             <div class="match-meta">
-              ${match.map || "Unknown Map"} • 
-              ${match.character || "Unknown Agent"} •
-              ${match.redScore ?? 0} - ${match.blueScore ?? 0}
+              ${match.meta?.map?.name || match.meta?.map || "Unknown Map"} •
+              ${match.stats?.character?.name || match.stats?.character || "Unknown Agent"} •
+              ${redScore} - ${blueScore}
             </div>
           </div>
 
           <div class="match-meta">
-            ${match.mode || "Competitive"}
+            ${match.meta?.mode || "Competitive"}
           </div>
         </div>
 
         <div class="match-stats">
-
           <div class="match-stat-box">
             <span>K / D / A</span>
             <strong>${kills} / ${deaths} / ${assists}</strong>
@@ -515,25 +549,29 @@ function renderMoreMatches() {
 
           <div class="match-stat-box">
             <span>Score</span>
-            <strong>${match.score ?? "-"}</strong>
+            <strong>${match.stats?.score || 0}</strong>
           </div>
 
           <div class="match-stat-box">
             <span>Damage</span>
-            <strong>${match.damage ?? "-"}</strong>
+            <strong>${match.stats?.damage?.dealt || match.stats?.damage || 0}</strong>
           </div>
-
         </div>
       </div>
     `;
-
   }).join("");
 
   recentMatchesGrid.insertAdjacentHTML("beforeend", html);
 
   currentMatchIndex += MATCHES_PER_LOAD;
 
+  // Şimdilik kapalı bırakıyoruz
+  // if (currentMatchIndex >= allSeasonMatches.length) {
+  //   const btn = document.getElementById("showMoreBtn");
+  //   if (btn) btn.style.display = "none";
+  // }
 }
+
   async function loadPlayer() {
     const response = await fetch(`${API_URL}/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
     const data = await response.json();
