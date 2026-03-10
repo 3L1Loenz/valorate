@@ -1558,6 +1558,24 @@ margin-top:6px;
 display:inline-block;
 
 }
+.show-more-wrapper{
+text-align:center;
+margin-top:20px;
+}
+
+#showMoreBtn{
+background:#ff4655;
+border:none;
+padding:10px 20px;
+border-radius:6px;
+color:white;
+font-weight:600;
+cursor:pointer;
+}
+
+#showMoreBtn:hover{
+opacity:0.9;
+}
 
 .rank-iron { background: rgba(120, 120, 120, 0.18); color: #c9c9c9; }
 .rank-bronze { background: rgba(120, 78, 52, 0.22); color: #d6a27e; }

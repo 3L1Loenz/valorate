@@ -359,7 +359,7 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
       totalMatches,
       summary,
       agents,
-      recentMatches: seasonMatches.slice(0, 10)
+      recentMatches: seasonMatches
     });
 
   } catch (error) {

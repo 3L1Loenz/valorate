@@ -67,8 +67,14 @@
 </div>
 
 <div class="panel">
-  <h2>Recent Matches</h2>
+  <h2>Current Season Matches</h2>
   <div id="recentMatchesGrid" class="recent-matches-grid"></div>
+
+  <div class="show-more-wrapper">
+    <button id="showMoreBtn" onclick="renderMoreMatches()">
+      Show More Matches
+    </button>
+  </div>
 </div>
 
   <footer class="site-footer">
@@ -197,6 +203,9 @@ async function findAgentLeaderboardRanks(agentPerformance) {
     return [];
   }
 }
+let currentMatchIndex = 0;
+const MATCHES_PER_LOAD = 10;
+let allSeasonMatches = [];
 async function loadLivePlayer() {
   const playerHero = document.getElementById("playerHero");
   const bestAgentHighlight = document.getElementById("bestAgentHighlight");
@@ -242,7 +251,8 @@ async function loadLivePlayer() {
     const season = seasonData?.season;
     const summary = seasonData?.summary || {};
     const agentPerformance = seasonData?.agents || [];
-    const recentMatches = seasonData?.recentMatches || [];
+    allSeasonMatches = seasonData?.recentMatches || [];
+currentMatchIndex = 0;
     const agentRanks = await findAgentLeaderboardRanks(agentPerformance);
     const accountName = account?.name || name;
     const accountTag = account?.tag || tag;
@@ -411,57 +421,33 @@ async function loadLivePlayer() {
             </div>
           `;
     }
-    if (recentMatchesGrid) {
-      recentMatchesGrid.innerHTML = recentMatches.length
-        ? recentMatches.slice(0, 10).map((match) => {
-            const kills = match.stats?.kills || 0;
-            const deaths = match.stats?.deaths || 0;
-            const assists = match.stats?.assists || 0;
-            const kda = calculateKDA(kills, deaths, assists);
-            const resultClass = match.stats?.won ? "win" : "loss";
-            const resultText = match.stats?.won ? "Victory" : "Defeat";
-            return `
-              <div class="match-card ${resultClass}">
-                <div class="match-top">
-                  <div>
-                    <div class="match-result ${resultClass}">${resultText}</div>
-                    <div class="match-meta">
-                      ${match.meta?.map?.name || "Unknown Map"} • ${match.stats?.character?.name || "Unknown Agent"}
-                    </div>
-                  </div>
-                  <div class="match-meta">
-                    ${match.meta?.mode || "Competitive"}
-                  </div>
-                </div>
-                <div class="match-stats">
-                  <div class="match-stat-box">
-                    <span>K / D / A</span>
-                    <strong>${kills} / ${deaths} / ${assists}</strong>
-                  </div>
-                  <div class="match-stat-box">
-                    <span>KDA</span>
-                    <strong>${kda}</strong>
-                  </div>
-                  <div class="match-stat-box">
-                    <span>Score</span>
-                    <strong>${match.stats?.score || 0}</strong>
-                  </div>
-                  <div class="match-stat-box">
-                    <span>Damage</span>
-                    <strong>${match.stats?.damage?.dealt || 0}</strong>
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join("")
-        : `
-            <div class="summary-card">
-              <span>No recent matches</span>
-              <strong>-</strong>
-              <small>No current season matches found</small>
-            </div>
-          `;
-    }
+  if (recentMatchesGrid) {
+
+  if (!allSeasonMatches.length) {
+
+    recentMatchesGrid.innerHTML = `
+      <div class="summary-card">
+        <span>No recent matches</span>
+        <strong>-</strong>
+        <small>No current season matches found</small>
+      </div>
+    `;
+
+    const btn = document.getElementById("showMoreBtn");
+    if (btn) btn.style.display = "none";
+
+  } else {
+
+    recentMatchesGrid.innerHTML = "";
+
+    const btn = document.getElementById("showMoreBtn");
+    if (btn) btn.style.display = "inline-block";
+
+    renderMoreMatches();
+
+  }
+
+} 
   } catch (error) {
     console.error("loadLivePlayer error:", error);
     playerHero.innerHTML = `
@@ -475,7 +461,83 @@ async function loadLivePlayer() {
     playerTable.innerHTML = "";
   }
 }
+function renderMoreMatches() {
 
+  const recentMatchesGrid = document.getElementById("recentMatchesGrid");
+
+  const nextMatches = allSeasonMatches.slice(
+    currentMatchIndex,
+    currentMatchIndex + MATCHES_PER_LOAD
+  );
+
+  const html = nextMatches.map((match) => {
+
+    const kills = match.stats?.kills || 0;
+    const deaths = match.stats?.deaths || 0;
+    const assists = match.stats?.assists || 0;
+
+    const kda = calculateKDA(kills, deaths, assists);
+
+    const resultClass = match.stats?.won ? "win" : "loss";
+    const resultText = match.stats?.won ? "Victory" : "Defeat";
+
+    return `
+      <div class="match-card ${resultClass}">
+        <div class="match-top">
+          <div>
+            <div class="match-result ${resultClass}">${resultText}</div>
+            <div class="match-meta">
+              ${match.meta?.map?.name || "Unknown Map"} • 
+              ${match.stats?.character?.name || "Unknown Agent"}
+            </div>
+          </div>
+
+          <div class="match-meta">
+            ${match.meta?.mode || "Competitive"}
+          </div>
+        </div>
+
+        <div class="match-stats">
+
+          <div class="match-stat-box">
+            <span>K / D / A</span>
+            <strong>${kills} / ${deaths} / ${assists}</strong>
+          </div>
+
+          <div class="match-stat-box">
+            <span>KDA</span>
+            <strong>${kda}</strong>
+          </div>
+
+          <div class="match-stat-box">
+            <span>Score</span>
+            <strong>${match.stats?.score || 0}</strong>
+          </div>
+
+          <div class="match-stat-box">
+            <span>Damage</span>
+            <strong>${match.stats?.damage?.dealt || 0}</strong>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+  }).join("");
+
+  recentMatchesGrid.insertAdjacentHTML("beforeend", html);
+
+  currentMatchIndex += MATCHES_PER_LOAD;
+
+  if (currentMatchIndex >= allSeasonMatches.length) {
+
+    const btn = document.getElementById("showMoreBtn");
+
+    if (btn) btn.style.display = "none";
+
+  }
+
+}
   async function loadPlayer() {
     const response = await fetch(`${API_URL}/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
     const data = await response.json();
