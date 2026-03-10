@@ -57,10 +57,19 @@
     </div>
 
     <div class="panel">
-      <h2>All Agent Stats</h2>
-      <div id="playerTable"></div>
-    </div>
-  </div>
+  <h2>All Agent Stats</h2>
+  <div id="playerTable"></div>
+</div>
+
+<div class="panel">
+  <h2>Agent Performance</h2>
+  <div id="agentPerformanceGrid" class="summary-grid"></div>
+</div>
+
+<div class="panel">
+  <h2>Recent Matches</h2>
+  <div id="recentMatchesGrid" class="recent-matches-grid"></div>
+</div>
 
   <footer class="site-footer">
     <div class="footer-inner">
@@ -82,50 +91,212 @@
   </footer>
 
   <script>
+  const API_URL = window.location.origin;
+  const params = new URLSearchParams(window.location.search);
+  const name = params.get("name");
+  const tag = params.get("tag");
+  const region = params.get("region") || "eu";
+  const mode = params.get("mode") || "local";
 
-    function getRankClass(rank) {
-  if (!rank) return "";
+  function getAgentImage(agentName) {
+    return `images/agents/${agentName.toLowerCase()}.png`;
+  }
 
-  const normalized = rank.toLowerCase().trim();
+  function getRankClass(rank) {
+    if (!rank) return "";
 
-  if (normalized.includes("iron")) return "rank-iron";
-  if (normalized.includes("bronze")) return "rank-bronze";
-  if (normalized.includes("silver")) return "rank-silver";
-  if (normalized.includes("gold")) return "rank-gold";
-  if (normalized.includes("platinum")) return "rank-platinum";
-  if (normalized.includes("diamond")) return "rank-diamond";
-  if (normalized.includes("ascendant")) return "rank-ascendant";
-  if (normalized.includes("immortal")) return "rank-immortal";
-  if (normalized.includes("radiant")) return "rank-radiant";
+    const normalized = rank.toLowerCase().trim();
 
-  return "";
-}
+    if (normalized.includes("iron")) return "rank-iron";
+    if (normalized.includes("bronze")) return "rank-bronze";
+    if (normalized.includes("silver")) return "rank-silver";
+    if (normalized.includes("gold")) return "rank-gold";
+    if (normalized.includes("platinum")) return "rank-platinum";
+    if (normalized.includes("diamond")) return "rank-diamond";
+    if (normalized.includes("ascendant")) return "rank-ascendant";
+    if (normalized.includes("immortal")) return "rank-immortal";
+    if (normalized.includes("radiant")) return "rank-radiant";
 
-    const API_URL = window.location.origin;
-    const params = new URLSearchParams(window.location.search);
-    const name = params.get("name");
-    const tag = params.get("tag");
+    return "";
+  }
 
-    function getAgentImage(agentName) {
-      return `images/agents/${agentName.toLowerCase()}.png`;
+  function formatMMRChange(change) {
+    if (change === null || change === undefined) {
+      return {
+        text: "-",
+        className: "mmr-neutral"
+      };
     }
 
-    async function loadPlayer() {
-      const response = await fetch(`${API_URL}/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
-      const data = await response.json();
+    if (change > 0) {
+      return {
+        text: `+${change}`,
+        className: "mmr-up"
+      };
+    }
 
-      const playerHero = document.getElementById("playerHero");
-      const bestAgentHighlight = document.getElementById("bestAgentHighlight");
-      const topAgentsCards = document.getElementById("topAgentsCards");
-      const playerTable = document.getElementById("playerTable");
-      const navLeaderboardLink = document.getElementById("navLeaderboardLink");
+    if (change < 0) {
+      return {
+        text: `${change}`,
+        className: "mmr-down"
+      };
+    }
 
-      if (data.error) {
+    return {
+      text: "0",
+      className: "mmr-neutral"
+    };
+  }
+
+  function calculateKDA(kills, deaths, assists) {
+    const safeDeaths = deaths > 0 ? deaths : 1;
+    return ((kills + assists) / safeDeaths).toFixed(2);
+  }
+
+  function formatMatchResult(playerTeam, redWon, blueWon) {
+    if (!playerTeam) return { text: "Unknown", className: "loss" };
+
+    const isWin =
+      (playerTeam.toLowerCase() === "red" && redWon) ||
+      (playerTeam.toLowerCase() === "blue" && blueWon);
+
+    return {
+      text: isWin ? "Victory" : "Defeat",
+      className: isWin ? "win" : "loss"
+    };
+  }
+
+  function getPlayerFromMatch(match, accountName, accountTag) {
+    const allPlayers = match.players?.all_players || [];
+
+    return allPlayers.find(
+      (p) =>
+        p.name?.toLowerCase() === accountName.toLowerCase() &&
+        p.tag?.toLowerCase() === accountTag.toLowerCase()
+    );
+  }
+
+  function buildAgentStatsFromMatches(matches, accountName, accountTag) {
+    const agentMap = {};
+
+    matches.forEach((match) => {
+      const player = getPlayerFromMatch(match, accountName, accountTag);
+      if (!player) return;
+
+      const agentName = player.character || "Unknown";
+
+      if (!agentMap[agentName]) {
+        agentMap[agentName] = {
+          agent: agentName,
+          matches: 0,
+          wins: 0,
+          kills: 0,
+          deaths: 0,
+          assists: 0
+        };
+      }
+
+      agentMap[agentName].matches += 1;
+      agentMap[agentName].kills += player.stats?.kills || 0;
+      agentMap[agentName].deaths += player.stats?.deaths || 0;
+      agentMap[agentName].assists += player.stats?.assists || 0;
+
+      const result = formatMatchResult(
+        player.team,
+        match.teams?.red?.has_won,
+        match.teams?.blue?.has_won
+      );
+
+      if (result.text === "Victory") {
+        agentMap[agentName].wins += 1;
+      }
+    });
+
+    return Object.values(agentMap)
+      .map((item) => ({
+        ...item,
+        winRate: item.matches > 0 ? ((item.wins / item.matches) * 100).toFixed(1) : "0.0",
+        kda: calculateKDA(item.kills, item.deaths, item.assists)
+      }))
+      .sort((a, b) => b.matches - a.matches);
+  }
+
+  async function findAgentLeaderboardRanks(agentPerformance) {
+    try {
+      const response = await fetch(`${API_URL}/players`);
+      const allPlayers = await response.json();
+
+      return agentPerformance.map((agentStat) => {
+        const rankingPool = allPlayers
+          .map((player) => {
+            const stat = player.stats?.find(
+              (s) => s.agent?.toLowerCase() === agentStat.agent.toLowerCase()
+            );
+
+            if (!stat) return null;
+
+            return {
+              player: `${player.name}#${player.tag}`,
+              agent: stat.agent,
+              worldRank: stat.worldRank
+            };
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.worldRank - b.worldRank);
+
+        const found = rankingPool.find(
+          (item) => item.player.toLowerCase() === `${name}#${tag}`.toLowerCase()
+        );
+
+        return {
+          agent: agentStat.agent,
+          rank: found ? found.worldRank : null
+        };
+      });
+    } catch (error) {
+      console.error("Agent leaderboard rank check failed:", error);
+      return [];
+    }
+  }
+
+  async function loadLivePlayer() {
+    const playerHero = document.getElementById("playerHero");
+    const bestAgentHighlight = document.getElementById("bestAgentHighlight");
+    const topAgentsCards = document.getElementById("topAgentsCards");
+    const playerTable = document.getElementById("playerTable");
+    const agentPerformanceGrid = document.getElementById("agentPerformanceGrid");
+    const recentMatchesGrid = document.getElementById("recentMatchesGrid");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/live-player/${encodeURIComponent(region)}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`
+      );
+
+      const liveData = await response.json();
+
+      const matchesResponse = await fetch(
+        `${API_URL}/live-matches/${encodeURIComponent(region)}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`
+      );
+
+      if (!matchesResponse.ok) {
+        const errorText = await matchesResponse.text();
+        console.error("MATCHES FETCH ERROR:", errorText);
+        throw new Error(`Matches request failed: ${matchesResponse.status}`);
+      }
+
+      const matchesData = await matchesResponse.json();
+
+      console.log("LIVE DATA:", liveData);
+      console.log("ACCOUNT:", liveData.account);
+      console.log("MMR:", liveData.mmr);
+      console.log("MATCHES DATA:", matchesData);
+
+      if (liveData.error) {
         playerHero.innerHTML = `
           <div class="empty-state">
-            <h2>Player not found</h2>
-            <p>We couldn't find a tracked profile for that Riot ID.</p>
-            <div class="empty-hint">Try: Ace#EU1</div>
+            <h2>Live player not found</h2>
+            <p>We couldn't load this Riot account from the live API.</p>
+            <div class="empty-hint">Check Riot ID and region.</div>
             <br />
             <a class="empty-action" href="index.html">Back to Home</a>
           </div>
@@ -133,94 +304,383 @@
         bestAgentHighlight.innerHTML = "";
         topAgentsCards.innerHTML = "";
         playerTable.innerHTML = "";
+        if (agentPerformanceGrid) agentPerformanceGrid.innerHTML = "";
+        if (recentMatchesGrid) recentMatchesGrid.innerHTML = "";
         return;
       }
 
-      const sortedStats = [...data.stats].sort((a, b) => a.worldRank - b.worldRank);
-      const bestAgent = sortedStats[0];
-      const topThree = sortedStats.slice(0, 3);
+      const account = liveData.account?.data;
+      const mmr = liveData.mmr?.data;
 
-      navLeaderboardLink.href = `leaderboard.html?agent=${encodeURIComponent(bestAgent.agent)}`;
+      const accountName = account?.name || name;
+      const accountTag = account?.tag || tag;
+      const accountRegion = account?.region?.toUpperCase() || region.toUpperCase();
+      const accountLevel = account?.account_level ?? "-";
+      const rankName = mmr?.current_data?.currenttierpatched || "Unranked";
+      const rr = mmr?.current_data?.ranking_in_tier ?? 0;
+      const cardImage =
+        account?.card?.large ||
+        account?.card?.small ||
+        account?.card?.wide ||
+        "images/valorate-logo.png";
+
+      const mmrChange = formatMMRChange(mmr?.current_data?.mmr_change_to_last_game);
+      const recentMatches = matchesData?.data || [];
+      const agentPerformance = buildAgentStatsFromMatches(recentMatches, accountName, accountTag);
+      const agentRanks = await findAgentLeaderboardRanks(agentPerformance);
 
       playerHero.innerHTML = `
         <div class="player-hero">
           <div>
-            <h1>${data.name}#${data.tag}</h1>
+            <h1>${accountName}#${accountTag}</h1>
             <p>
-  ${data.region} •
-  <span class="rank-pill ${getRankClass(data.rank)}">${data.rank}</span>
-</p>
+              ${accountRegion} •
+              <span class="rank-pill ${getRankClass(rankName)}">${rankName}</span>
+              ${typeof rr === "number" ? `• ${rr} RR` : ""}
+            </p>
           </div>
         </div>
 
         <div class="stat-grid">
           <div class="stat-card">
-            <span>Best Agent</span>
-            <strong>${data.bestAgent}</strong>
+            <span>Account Level</span>
+            <strong>${accountLevel}</strong>
           </div>
           <div class="stat-card">
             <span>Region</span>
-            <strong>${data.region}</strong>
+            <strong>${accountRegion}</strong>
           </div>
           <div class="stat-card">
-            <span>Rank</span>
-            <strong>${data.rank}</strong>
+            <span>Current Rank</span>
+            <strong>${rankName}</strong>
           </div>
           <div class="stat-card">
-            <span>Tracked Agents</span>
-            <strong>${data.stats.length}</strong>
+            <span>RR</span>
+            <strong>${rr}</strong>
           </div>
         </div>
       `;
 
       bestAgentHighlight.innerHTML = `
-        <div class="best-agent-highlight">
-          <img src="${getAgentImage(bestAgent.agent)}" alt="${bestAgent.agent}" class="best-agent-image" />
-          <div>
-            <span class="mini-label">Top Performing Agent</span>
-            <h2>${bestAgent.agent}</h2>
-            <p>
-              World Rank #${bestAgent.worldRank} • ${bestAgent.winRate}% Win Rate •
-              ${bestAgent.kda} KDA • ${bestAgent.matches} Matches
-            </p>
-            <a class="primary-link-btn" href="agent.html?name=${encodeURIComponent(bestAgent.agent)}">
-              Open ${bestAgent.agent} Page
-            </a>
+        <div class="live-profile-layout">
+          <div class="live-card-panel">
+            <img src="${cardImage}" alt="${accountName}" class="best-agent-image live-player-card-image" />
+          </div>
+
+          <div class="live-stats-panel">
+            <span class="mini-label">Live Account Overview</span>
+            <h2>${accountName}#${accountTag}</h2>
+
+            <div class="live-stats-grid">
+              <div class="live-stat-box">
+                <span>Current Rank</span>
+                <strong>${rankName}</strong>
+              </div>
+
+              <div class="live-stat-box">
+                <span>Current RR</span>
+                <strong>${rr}</strong>
+              </div>
+
+              <div class="live-stat-box">
+                <span>Peak Rank</span>
+                <strong>${mmr?.highest_rank?.patched_tier || "Unknown"}</strong>
+              </div>
+
+              <div class="live-stat-box">
+                <span>Account Level</span>
+                <strong>${accountLevel}</strong>
+              </div>
+
+              <div class="live-stat-box">
+                <span>Region</span>
+                <strong>${accountRegion}</strong>
+              </div>
+
+              <div class="live-stat-box">
+                <span>Last MMR Change</span>
+                <strong class="${mmrChange.className}">${mmrChange.text}</strong>
+              </div>
+            </div>
           </div>
         </div>
       `;
 
-      topAgentsCards.innerHTML = topThree.map(item => `
-        <div class="summary-card">
-          <span>${item.agent}</span>
-          <strong>#${item.worldRank}</strong>
-          <small>${item.winRate}% WR • ${item.kda} KDA • ${item.matches} matches</small>
-        </div>
-      `).join("");
+      topAgentsCards.innerHTML = agentPerformance.length
+        ? agentPerformance.slice(0, 3).map((agent) => `
+            <div class="summary-card">
+              <span>${agent.agent}</span>
+              <strong>${agent.winRate}% WR</strong>
+              <small>${agent.matches} matches • ${agent.kda} KDA</small>
+            </div>
+          `).join("")
+        : `
+            <div class="summary-card">
+              <span>No agent stats</span>
+              <strong>-</strong>
+              <small>No recent live match data available</small>
+            </div>
+          `;
 
       playerTable.innerHTML = `
         <table>
           <tr>
-            <th>Agent</th>
-            <th>Win Rate</th>
-            <th>KDA</th>
-            <th>Matches</th>
-            <th>World Rank</th>
+            <th>Field</th>
+            <th>Value</th>
           </tr>
-          ${sortedStats.map(item => `
-            <tr>
-              <td>${item.agent}</td>
-              <td>${item.winRate}%</td>
-              <td>${item.kda}</td>
-              <td>${item.matches}</td>
-              <td>#${item.worldRank}</td>
-            </tr>
-          `).join("")}
+          <tr>
+            <td>Name</td>
+            <td>${accountName}</td>
+          </tr>
+          <tr>
+            <td>Tag</td>
+            <td>${accountTag}</td>
+          </tr>
+          <tr>
+            <td>Region</td>
+            <td>${accountRegion}</td>
+          </tr>
+          <tr>
+            <td>Account Level</td>
+            <td>${accountLevel}</td>
+          </tr>
+          <tr>
+            <td>Current Rank</td>
+            <td>${rankName}</td>
+          </tr>
+          <tr>
+            <td>RR</td>
+            <td>${rr}</td>
+          </tr>
+          <tr>
+            <td>Peak Rank</td>
+            <td>${mmr?.highest_rank?.patched_tier || "Unknown"}</td>
+          </tr>
         </table>
       `;
+
+      if (agentPerformanceGrid) {
+        agentPerformanceGrid.innerHTML = agentPerformance.length
+          ? agentPerformance.map((agent) => {
+              const rankInfo = agentRanks.find((r) => r.agent === agent.agent);
+              const top100Badge =
+                rankInfo && rankInfo.rank && rankInfo.rank <= 100
+                  ? `<div class="agent-rank-badge">Top #${rankInfo.rank} on ${agent.agent}</div>`
+                  : "";
+
+              return `
+                <div class="summary-card">
+                  <span>${agent.agent}</span>
+                  <strong>${agent.winRate}% WR</strong>
+                  <small>${agent.matches} matches • ${agent.kda} KDA</small>
+                  ${top100Badge}
+                </div>
+              `;
+            }).join("")
+          : `
+              <div class="summary-card">
+                <span>No data</span>
+                <strong>-</strong>
+                <small>No recent live matches found</small>
+              </div>
+            `;
+      }
+
+      if (recentMatchesGrid) {
+        recentMatchesGrid.innerHTML = recentMatches.length
+          ? recentMatches.slice(0, 5).map((match) => {
+              const player = getPlayerFromMatch(match, accountName, accountTag);
+              if (!player) return "";
+
+              const result = formatMatchResult(
+                player.team,
+                match.teams?.red?.has_won,
+                match.teams?.blue?.has_won
+              );
+
+              const kills = player.stats?.kills || 0;
+              const deaths = player.stats?.deaths || 0;
+              const assists = player.stats?.assists || 0;
+              const kda = calculateKDA(kills, deaths, assists);
+
+              return `
+                <div class="match-card ${result.className}">
+                  <div class="match-top">
+                    <div>
+                      <div class="match-result ${result.className}">${result.text}</div>
+                      <div class="match-meta">
+                        ${match.metadata?.map || "Unknown Map"} • ${player.character || "Unknown Agent"}
+                      </div>
+                    </div>
+
+                    <div class="match-meta">
+                      ${match.metadata?.mode || "Unknown Mode"}
+                    </div>
+                  </div>
+
+                  <div class="match-stats">
+                    <div class="match-stat-box">
+                      <span>K / D / A</span>
+                      <strong>${kills} / ${deaths} / ${assists}</strong>
+                    </div>
+
+                    <div class="match-stat-box">
+                      <span>KDA</span>
+                      <strong>${kda}</strong>
+                    </div>
+
+                    <div class="match-stat-box">
+                      <span>Score</span>
+                      <strong>${player.stats?.score || 0}</strong>
+                    </div>
+
+                    <div class="match-stat-box">
+                      <span>Headshots</span>
+                      <strong>${player.stats?.headshots || 0}</strong>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join("")
+          : `
+              <div class="summary-card">
+                <span>No recent matches</span>
+                <strong>-</strong>
+                <small>Live match history could not be loaded</small>
+              </div>
+            `;
+      }
+    } catch (error) {
+      console.error("loadLivePlayer error:", error);
+
+      playerHero.innerHTML = `
+        <div class="empty-state">
+          <h2>Error loading player</h2>
+          <p>Check console logs.</p>
+        </div>
+      `;
+
+      bestAgentHighlight.innerHTML = "";
+      topAgentsCards.innerHTML = "";
+      playerTable.innerHTML = "";
+    }
+  }
+
+  async function loadPlayer() {
+    const response = await fetch(`${API_URL}/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
+    const data = await response.json();
+
+    const playerHero = document.getElementById("playerHero");
+    const bestAgentHighlight = document.getElementById("bestAgentHighlight");
+    const topAgentsCards = document.getElementById("topAgentsCards");
+    const playerTable = document.getElementById("playerTable");
+    const navLeaderboardLink = document.getElementById("navLeaderboardLink");
+
+    if (data.error) {
+      playerHero.innerHTML = `
+        <div class="empty-state">
+          <h2>Player not found</h2>
+          <p>We couldn't find a tracked profile for that Riot ID.</p>
+          <div class="empty-hint">Try: Ace#EU1</div>
+          <br />
+          <a class="empty-action" href="index.html">Back to Home</a>
+        </div>
+      `;
+      bestAgentHighlight.innerHTML = "";
+      topAgentsCards.innerHTML = "";
+      playerTable.innerHTML = "";
+      return;
     }
 
+    const sortedStats = [...data.stats].sort((a, b) => a.worldRank - b.worldRank);
+    const bestAgent = sortedStats[0];
+    const topThree = sortedStats.slice(0, 3);
+
+    navLeaderboardLink.href = `leaderboard.html?agent=${encodeURIComponent(bestAgent.agent)}`;
+
+    playerHero.innerHTML = `
+      <div class="player-hero">
+        <div>
+          <h1>${data.name}#${data.tag}</h1>
+          <p>
+            ${data.region} •
+            <span class="rank-pill ${getRankClass(data.rank)}">${data.rank}</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span>Best Agent</span>
+          <strong>${data.bestAgent}</strong>
+        </div>
+        <div class="stat-card">
+          <span>Region</span>
+          <strong>${data.region}</strong>
+        </div>
+        <div class="stat-card">
+          <span>Rank</span>
+          <strong>${data.rank}</strong>
+        </div>
+        <div class="stat-card">
+          <span>Tracked Agents</span>
+          <strong>${data.stats.length}</strong>
+        </div>
+      </div>
+    `;
+
+    bestAgentHighlight.innerHTML = `
+      <div class="best-agent-highlight">
+        <img src="${getAgentImage(bestAgent.agent)}" alt="${bestAgent.agent}" class="best-agent-image" />
+        <div>
+          <span class="mini-label">Top Performing Agent</span>
+          <h2>${bestAgent.agent}</h2>
+          <p>
+            World Rank #${bestAgent.worldRank} • ${bestAgent.winRate}% Win Rate •
+            ${bestAgent.kda} KDA • ${bestAgent.matches} Matches
+          </p>
+          <a class="primary-link-btn" href="agent.html?name=${encodeURIComponent(bestAgent.agent)}">
+            Open ${bestAgent.agent} Page
+          </a>
+        </div>
+      </div>
+    `;
+
+    topAgentsCards.innerHTML = topThree.map(item => `
+      <div class="summary-card">
+        <span>${item.agent}</span>
+        <strong>#${item.worldRank}</strong>
+        <small>${item.winRate}% WR • ${item.kda} KDA • ${item.matches} matches</small>
+      </div>
+    `).join("");
+
+    playerTable.innerHTML = `
+      <table>
+        <tr>
+          <th>Agent</th>
+          <th>Win Rate</th>
+          <th>KDA</th>
+          <th>Matches</th>
+          <th>World Rank</th>
+        </tr>
+        ${sortedStats.map(item => `
+          <tr>
+            <td>${item.agent}</td>
+            <td>${item.winRate}%</td>
+            <td>${item.kda}</td>
+            <td>${item.matches}</td>
+            <td>#${item.worldRank}</td>
+          </tr>
+        `).join("")}
+      </table>
+    `;
+  }
+
+  if (mode === "live") {
+    loadLivePlayer();
+  } else {
     loadPlayer();
-  </script>
+  }
+</script>
 </body>
 </html>

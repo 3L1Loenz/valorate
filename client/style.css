@@ -1369,6 +1369,184 @@ padding-top:150px;
   background: rgba(255, 180, 70, 0.22);
   color: #ffd38a;
 }
+#regionInput {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 70, 85, 0.2);
+  background: rgba(7, 16, 25, 0.95);
+  color: #fff;
+  outline: none;
+  min-width: 110px;
+}
+.live-profile-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-top: 20px;
+}
+
+.live-card-panel {
+  display: flex;
+  justify-content: center;
+}
+
+.live-player-card-image {
+  width: 100%;
+  max-width: 260px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+.live-stats-panel {
+  background: rgba(14, 28, 42, 0.82);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 18px;
+  padding: 22px;
+}
+
+.live-stats-panel h2 {
+  margin-top: 8px;
+  margin-bottom: 18px;
+}
+
+.live-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.live-stat-box {
+  background: rgba(22, 40, 58, 0.92);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.live-stat-box span {
+  display: block;
+  color: #9fb2c5;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.live-stat-box strong {
+  font-size: 24px;
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .live-profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .live-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .live-player-card-image {
+    max-width: 320px;
+  }
+}
+.live-stat-box strong.mmr-up {
+  color: #3bff8a !important;
+}
+
+.live-stat-box strong.mmr-down {
+  color: #ff5a5a !important;
+}
+
+.live-stat-box strong.mmr-neutral {
+  color: #9fb2c5 !important;
+}
+.live-stat-box strong {
+  font-size: 26px;
+  font-weight: 700;
+}
+.recent-matches-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.match-card {
+  background: rgba(17, 34, 49, 0.95);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.match-card.win {
+  border-left: 4px solid #3bff8a;
+}
+
+.match-card.loss {
+  border-left: 4px solid #ff5a5a;
+}
+
+.match-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.match-result {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.match-result.win {
+  color: #3bff8a;
+}
+
+.match-result.loss {
+  color: #ff5a5a;
+}
+
+.match-meta {
+  color: #9fb2c5;
+  font-size: 13px;
+}
+
+.match-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.match-stat-box {
+  background: rgba(22, 40, 58, 0.92);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.match-stat-box span {
+  display: block;
+  font-size: 12px;
+  color: #9fb2c5;
+  margin-bottom: 6px;
+}
+
+.match-stat-box strong {
+  font-size: 20px;
+  color: #fff;
+}
+
+.agent-rank-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 70, 85, 0.15);
+  color: #ff8b96;
+  border: 1px solid rgba(255, 70, 85, 0.35);
+}
 
 .rank-iron { background: rgba(120, 120, 120, 0.18); color: #c9c9c9; }
 .rank-bronze { background: rgba(120, 78, 52, 0.22); color: #d6a27e; }

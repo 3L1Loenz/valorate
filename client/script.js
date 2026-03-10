@@ -402,10 +402,8 @@ async function loadAgents() {
 }
 
 function searchPlayer() {
-  const input = document.getElementById("playerInput");
-  if (!input) return;
-
-  const riotId = input.value.trim();
+  const riotId = document.getElementById("playerInput").value.trim();
+  const region = document.getElementById("regionInput")?.value || "eu";
 
   if (!riotId) return;
 
@@ -426,7 +424,8 @@ function searchPlayer() {
   saveRecentSearch(`${name}#${tag}`);
   renderRecentSearches();
 
-  window.location.href = `player.html?name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`;
+  window.location.href =
+    `player.html?mode=live&region=${encodeURIComponent(region)}&name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`;
 }
 
 function setupAutocomplete() {

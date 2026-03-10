@@ -11,12 +11,18 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../client")));
 
+// ===== LOCAL MOCK DATA =====
 const agents = require("./data/agents.json");
 const players = require("./data/players.json");
 const leaderboard = require("./data/leaderboard.json");
 
+// ===== CONFIG =====
 const PORT = process.env.PORT || 3000;
 const HENRIK_API_KEY = process.env.HENRIK_API_KEY;
+
+if (!HENRIK_API_KEY) {
+  console.warn("WARNING: HENRIK_API_KEY is missing in server/.env");
+}
 
 // ===== STATIC PAGES =====
 app.get("/", (req, res) => {
@@ -117,7 +123,10 @@ app.get("/global-leaderboard", (req, res) => {
   res.json(globalData);
 });
 
-// ===== REAL API ROUTE (HenrikDev) =====
+// ===== HENRIK LIVE PLAYER ROUTE =====
+// Example:
+// /live-player/eu/scream/EU
+// /live-player/na/TenZ/NA1
 app.get("/live-player/:region/:name/:tag", async (req, res) => {
   try {
     if (!HENRIK_API_KEY) {
@@ -143,11 +152,13 @@ app.get("/live-player/:region/:name/:tag", async (req, res) => {
       Authorization: HENRIK_API_KEY
     };
 
+    // Account info
     const accountResponse = await axios.get(
       `https://api.henrikdev.xyz/valorant/v1/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
       { headers }
     );
 
+    // MMR / Rank info
     const mmrResponse = await axios.get(
       `https://api.henrikdev.xyz/valorant/v2/mmr/${normalizedRegion}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
       { headers }
@@ -169,10 +180,45 @@ app.get("/live-player/:region/:name/:tag", async (req, res) => {
   }
 });
 
-if (!HENRIK_API_KEY) {
-  console.warn("WARNING: HENRIK_API_KEY is missing in server/.env");
-}
+app.get("/live-matches/:region/:name/:tag", async (req, res) => {
+  try {
+    if (!HENRIK_API_KEY) {
+      return res.status(500).json({
+        error: "Henrik API key missing",
+        details: "Add HENRIK_API_KEY to server/.env"
+      });
+    }
 
+    const { region, name, tag } = req.params;
+    const normalizedRegion = region.toLowerCase();
+
+    const allowedRegions = ["eu", "na", "ap", "kr", "latam", "br"];
+    if (!allowedRegions.includes(normalizedRegion)) {
+      return res.status(400).json({
+        error: "Invalid region",
+        details: `Allowed regions: ${allowedRegions.join(", ")}`
+      });
+    }
+
+    const headers = {
+      Authorization: HENRIK_API_KEY
+    };
+
+    const response = await axios.get(
+      `https://api.henrikdev.xyz/valorant/v3/matches/${normalizedRegion}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
+      { headers }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Henrik matches error:", error.response?.data || error.message);
+
+    res.status(error.response?.status || 500).json({
+      error: "Henrik matches error",
+      details: error.response?.data || error.message
+    });
+  }
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on http://localhost:${PORT}`);
