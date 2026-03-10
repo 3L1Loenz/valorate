@@ -267,11 +267,11 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
 
     const puuid = account.puuid;
 
-    // 2) v4 matches pagination
+    // 2) Match list pagination
     let allMatches = [];
     let start = 0;
     const size = 10;
-    const MAX_PAGES = 5; // en fazla 50 maç çek
+    const MAX_PAGES = 5; // en fazla 50 maç
     let currentSeasonId = null;
     let currentSeasonShort = null;
     let reachedOlderSeason = false;
@@ -309,49 +309,13 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
       pageCount += 1;
     }
 
-    const seasonMatches = allMatches;
-
-    if (!seasonMatches.length) {
-      const emptyPayload = {
-        season: null,
-        totalMatches: 0,
-        summary: {
-          winRate: "0.0",
-          kda: "0.00",
-          kills: 0,
-          deaths: 0,
-          assists: 0
-        },
-        agents: [],
-        recentMatches: []
-      };
-
-      seasonCache.set(cacheKey, {
-        timestamp: Date.now(),
-        data: emptyPayload
-      });
-
-      return res.json(emptyPayload);
-    }
-
-    let totalKills = 0;
-    let totalDeaths = 0;
-    let totalAssists = 0;
-    let totalWins = 0;
-
-    const agentMap = {};
-
-    seasonMatches.forEach((match) => {
+    const seasonMatches = allMatches.map((match) => {
+      const meta = match.meta || {};
       const stats = match.stats || {};
+      const teams = match.teams || {};
 
-      const kills = Number(stats.kills || 0);
-      const deaths = Number(stats.deaths || 0);
-      const assists = Number(stats.assists || 0);
-
-      const playerTeam = String(stats.team || "").toLowerCase().trim();
-
-      const redValue = match.teams?.red;
-      const blueValue = match.teams?.blue;
+      const redValue = teams.red;
+      const blueValue = teams.blue;
 
       let redScore = 0;
       let blueScore = 0;
@@ -368,77 +332,50 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
         blueScore = Number(blueValue.rounds_won ?? blueValue.score ?? blueValue.value ?? 0);
       }
 
-      const won =
+      const playerTeam = String(stats.team || "").toLowerCase().trim();
+
+      const isWin =
         (playerTeam === "red" && redScore > blueScore) ||
         (playerTeam === "blue" && blueScore > redScore);
 
-      totalKills += kills;
-      totalDeaths += deaths;
-      totalAssists += assists;
+      return {
+        id: match.meta?.id || match.metadata?.matchid || null,
+        map: meta.map?.name || meta.map || "Unknown Map",
+        mode: meta.mode || "Competitive",
+        seasonId: meta.season?.id || null,
+        seasonShort: meta.season?.short || null,
+        startedAt: meta.started_at || null,
 
-      if (won) totalWins += 1;
+        character: stats.character?.name || stats.character || "Unknown Agent",
+        team: stats.team || null,
+        result: isWin ? "Victory" : "Defeat",
+        resultClass: isWin ? "win" : "loss",
 
-      const agent = stats.character?.name || "Unknown";
+        redScore,
+        blueScore,
 
-      if (!agentMap[agent]) {
-        agentMap[agent] = {
-          agent,
-          matches: 0,
-          wins: 0,
-          kills: 0,
-          deaths: 0,
-          assists: 0
-        };
-      }
-
-      agentMap[agent].matches += 1;
-      agentMap[agent].kills += kills;
-      agentMap[agent].deaths += deaths;
-      agentMap[agent].assists += assists;
-
-      if (won) {
-        agentMap[agent].wins += 1;
-      }
+        // varsa kullan, yoksa null bırak
+        kills: stats.kills ?? null,
+        deaths: stats.deaths ?? null,
+        assists: stats.assists ?? null,
+        score: stats.score ?? null,
+        damage: stats.damage?.dealt ?? stats.damage ?? null
+      };
     });
-
-    const totalMatches = seasonMatches.length;
-
-    const summary = {
-      winRate: totalMatches > 0 ? ((totalWins / totalMatches) * 100).toFixed(1) : "0.0",
-      kda: ((totalKills + totalAssists) / Math.max(totalDeaths, 1)).toFixed(2),
-      kills: totalKills,
-      deaths: totalDeaths,
-      assists: totalAssists
-    };
-
-    const agents = Object.values(agentMap)
-      .map((a) => ({
-        agent: a.agent,
-        matches: a.matches,
-        wins: a.wins,
-        winRate: a.matches > 0 ? ((a.wins / a.matches) * 100).toFixed(1) : "0.0",
-        kda: ((a.kills + a.assists) / Math.max(a.deaths, 1)).toFixed(2),
-        kills: a.kills,
-        deaths: a.deaths,
-        assists: a.assists
-      }))
-      .sort((a, b) => b.matches - a.matches);
 
     const payload = {
       season: {
         id: currentSeasonId,
         short: currentSeasonShort
       },
-      totalMatches,
-      summary,
-      agents,
+      totalMatches: seasonMatches.length,
       recentMatches: seasonMatches
     };
 
     console.log("CACHE KEY:", cacheKey);
     console.log("PAGES FETCHED:", pageCount);
     console.log("CURRENT SEASON ID:", currentSeasonId);
-    console.log("CURRENT SEASON MATCHES:", totalMatches);
+    console.log("CURRENT SEASON MATCHES:", seasonMatches.length);
 
     seasonCache.set(cacheKey, {
       timestamp: Date.now(),

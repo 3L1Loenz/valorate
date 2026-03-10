@@ -250,11 +250,11 @@ async function loadLivePlayer() {
     const account = liveData.account?.data;
     const mmr = liveData.mmr?.data;
     const season = seasonData?.season;
-    const summary = seasonData?.summary || {};
-    const agentPerformance = seasonData?.agents || [];
-    allSeasonMatches = seasonData?.recentMatches || [];
+allSeasonMatches = seasonData?.recentMatches || [];
 currentMatchIndex = 0;
-    const agentRanks = await findAgentLeaderboardRanks(agentPerformance);
+
+const agentPerformance = [];
+const agentRanks = [];
     const accountName = account?.name || name;
     const accountTag = account?.tag || tag;
     const accountRegion = account?.region?.toUpperCase() || region.toUpperCase();
@@ -334,94 +334,78 @@ currentMatchIndex = 0;
         </div>
       </div>
     `;
-    topAgentsCards.innerHTML = `
-      <div class="summary-card">
-        <span>Season Win Rate</span>
-        <strong>${summary.winRate || "0.0"}%</strong>
-        <small>${seasonData?.totalMatches || 0} competitive matches</small>
-      </div>
-      <div class="summary-card">
-        <span>Season KDA</span>
-        <strong>${summary.kda || "0.00"}</strong>
-        <small>${summary.kills || 0} / ${summary.deaths || 0} / ${summary.assists || 0}</small>
-      </div>
-      <div class="summary-card">
-        <span>Best Season Agent</span>
-        <strong>${agentPerformance[0]?.agent || "Unknown"}</strong>
-        <small>${agentPerformance[0]?.winRate || "0.0"}% WR • ${agentPerformance[0]?.kda || "0.00"} KDA</small>
-      </div>
-    `;
+   topAgentsCards.innerHTML = `
+  <div class="summary-card">
+    <span>Season Matches Found</span>
+    <strong>${seasonData?.totalMatches || 0}</strong>
+    <small>Competitive matches returned by API</small>
+  </div>
+
+  <div class="summary-card">
+    <span>Season</span>
+    <strong>${season?.short || "Unknown"}</strong>
+    <small>Current detected season</small>
+  </div>
+
+  <div class="summary-card">
+    <span>Status</span>
+    <strong>Live</strong>
+    <small>Season match list loaded successfully</small>
+  </div>
+`;
     playerTable.innerHTML = `
-      <table>
-        <tr>
-          <th>Field</th>
-          <th>Value</th>
-        </tr>
-        <tr>
-          <td>Name</td>
-          <td>${accountName}</td>
-        </tr>
-        <tr>
-          <td>Tag</td>
-          <td>${accountTag}</td>
-        </tr>
-        <tr>
-          <td>Region</td>
-          <td>${accountRegion}</td>
-        </tr>
-        <tr>
-          <td>Account Level</td>
-          <td>${accountLevel}</td>
-        </tr>
-        <tr>
-          <td>Current Rank</td>
-          <td>${rankName}</td>
-        </tr>
-        <tr>
-          <td>RR</td>
-          <td>${rr}</td>
-        </tr>
-        <tr>
-          <td>Peak Rank</td>
-          <td>${mmr?.highest_rank?.patched_tier || "Unknown"}</td>
-        </tr>
-        <tr>
-          <td>Season</td>
-          <td>${season?.short || "Unknown"}</td>
-        </tr>
-        <tr>
-          <td>Season Matches</td>
-          <td>${seasonData?.totalMatches || 0}</td>
-        </tr>
-      </table>
-    `;
+  <table>
+    <tr>
+      <th>Field</th>
+      <th>Value</th>
+    </tr>
+    <tr>
+      <td>Name</td>
+      <td>${accountName}</td>
+    </tr>
+    <tr>
+      <td>Tag</td>
+      <td>${accountTag}</td>
+    </tr>
+    <tr>
+      <td>Region</td>
+      <td>${accountRegion}</td>
+    </tr>
+    <tr>
+      <td>Account Level</td>
+      <td>${accountLevel}</td>
+    </tr>
+    <tr>
+      <td>Current Rank</td>
+      <td>${rankName}</td>
+    </tr>
+    <tr>
+      <td>RR</td>
+      <td>${rr}</td>
+    </tr>
+    <tr>
+      <td>Peak Rank</td>
+      <td>${mmr?.highest_rank?.patched_tier || "Unknown"}</td>
+    </tr>
+    <tr>
+      <td>Season</td>
+      <td>${season?.short || "Unknown"}</td>
+    </tr>
+    <tr>
+      <td>Season Matches Found</td>
+      <td>${seasonData?.totalMatches || 0}</td>
+    </tr>
+  </table>
+`;
     if (agentPerformanceGrid) {
-      agentPerformanceGrid.innerHTML = agentPerformance.length
-  ? agentPerformance.map((agent) => {
-      const rankInfo = agentRanks.find((r) => r.agent === agent.agent);
-
-      const top100Badge =
-        rankInfo && rankInfo.rank && rankInfo.rank <= 100
-          ? `<div class="agent-rank-badge">Top #${rankInfo.rank}</div>`
-          : "";
-
-      return `
-        <div class="summary-card">
-          <span>${agent.agent}</span>
-          <strong>${agent.winRate}% WR</strong>
-          <small>${agent.matches} matches • ${agent.kda} KDA</small>
-          ${top100Badge}
-        </div>
-      `;
-    }).join("")
-        : `
-            <div class="summary-card">
-              <span>No data</span>
-              <strong>-</strong>
-              <small>No current season match data found</small>
-            </div>
-          `;
-    }
+  agentPerformanceGrid.innerHTML = `
+    <div class="summary-card">
+      <span>Agent stats temporarily simplified</span>
+      <strong>Match list active</strong>
+      <small>We are currently using reliable season match data only</small>
+    </div>
+  `;
+}
   if (recentMatchesGrid) {
 
   if (!allSeasonMatches.length) {
@@ -486,22 +470,19 @@ function renderMoreMatches() {
 
   const html = nextMatches.map((match) => {
 
-    const kills = match.stats?.kills || 0;
-    const deaths = match.stats?.deaths || 0;
-    const assists = match.stats?.assists || 0;
+    const kills = match.kills ?? "-";
+    const deaths = match.deaths ?? "-";
+    const assists = match.assists ?? "-";
 
-    const kda = calculateKDA(kills, deaths, assists);
+    const kda =
+      typeof match.kills === "number" &&
+      typeof match.deaths === "number" &&
+      typeof match.assists === "number"
+        ? calculateKDA(match.kills, match.deaths, match.assists)
+        : "-";
 
-const playerTeam = (match.stats?.team || "").toLowerCase();
-const redScore = Number(match.teams?.red || 0);
-const blueScore = Number(match.teams?.blue || 0);
-
-const isWin =
-  (playerTeam === "red" && redScore > blueScore) ||
-  (playerTeam === "blue" && blueScore > redScore);
-
-const resultClass = isWin ? "win" : "loss";
-const resultText = isWin ? "Victory" : "Defeat";
+    const resultClass = match.resultClass || "loss";
+    const resultText = match.result || "Defeat";
 
     return `
       <div class="match-card ${resultClass}">
@@ -509,13 +490,14 @@ const resultText = isWin ? "Victory" : "Defeat";
           <div>
             <div class="match-result ${resultClass}">${resultText}</div>
             <div class="match-meta">
-              ${match.meta?.map?.name || "Unknown Map"} • 
-              ${match.stats?.character?.name || "Unknown Agent"}
+              ${match.map || "Unknown Map"} • 
+              ${match.character || "Unknown Agent"} •
+              ${match.redScore ?? 0} - ${match.blueScore ?? 0}
             </div>
           </div>
 
           <div class="match-meta">
-            ${match.meta?.mode || "Competitive"}
+            ${match.mode || "Competitive"}
           </div>
         </div>
 
@@ -533,12 +515,12 @@ const resultText = isWin ? "Victory" : "Defeat";
 
           <div class="match-stat-box">
             <span>Score</span>
-            <strong>${match.stats?.score || 0}</strong>
+            <strong>${match.score ?? "-"}</strong>
           </div>
 
           <div class="match-stat-box">
             <span>Damage</span>
-            <strong>${match.stats?.damage?.dealt || 0}</strong>
+            <strong>${match.damage ?? "-"}</strong>
           </div>
 
         </div>
@@ -550,11 +532,6 @@ const resultText = isWin ? "Victory" : "Defeat";
   recentMatchesGrid.insertAdjacentHTML("beforeend", html);
 
   currentMatchIndex += MATCHES_PER_LOAD;
-
-  // if (currentMatchIndex >= allSeasonMatches.length) {
-//   const btn = document.getElementById("showMoreBtn");
-//   if (btn) btn.style.display = "none";
-// }
 
 }
   async function loadPlayer() {
