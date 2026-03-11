@@ -49,8 +49,20 @@
   </div>
 </div>
 
-    <a href="#searchSection" class="search-cta">Search Player</a>
+    <div class="nav-login-box">
+  <input type="text" id="navRiotId" placeholder="Riot ID" />
+  
+  <select id="navRegion">
+    <option value="eu">EU</option>
+    <option value="na">NA</option>
+    <option value="ap">AP</option>
+    <option value="kr">KR</option>
+    <option value="latam">LATAM</option>
+    <option value="br">BR</option>
+  </select>
 
+  <button onclick="loginFromNavbar()">Sign In</button>
+</div>
   </div>
 </header>
 
@@ -83,14 +95,23 @@
 
 <div class="panel my-rank-panel" id="myRankPanel">
   <div id="authState">
-    <h2>My Ranking</h2>
-    <p>Sign in with your Riot ID to view your personal ranking overview.</p>
+  <h2>My Ranking</h2>
+  <p>Enter your Riot ID to view your current season overview.</p>
 
-    <div class="login-form">
-      <input type="text" id="loginRiotId" placeholder="Enter Riot ID (example: Ace#EU1)" />
-      <button onclick="loginPlayer()">Sign In</button>
-    </div>
+  <div class="login-form">
+    <select id="loginRegion">
+      <option value="eu">EU</option>
+      <option value="na">NA</option>
+      <option value="ap">AP</option>
+      <option value="kr">KR</option>
+      <option value="latam">LATAM</option>
+      <option value="br">BR</option>
+    </select>
+
+    <input type="text" id="loginRiotId" placeholder="Enter Riot ID (example: TenZ#NA1)" />
+    <button onclick="loginPlayer()">Sign In</button>
   </div>
+</div>
 
   <div id="loggedInState" style="display:none;"></div>
 </div>

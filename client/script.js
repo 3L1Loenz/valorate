@@ -85,29 +85,36 @@ function findPlayerGlobalPosition(name, tag) {
 }
 
 function loginPlayer() {
-  const input = document.getElementById("loginRiotId");
-  if (!input) return;
+  const riotIdInput = document.getElementById("loginRiotId");
+  const regionInput = document.getElementById("loginRegion");
 
-  const riotId = input.value.trim();
-  const parsed = parseRiotId(riotId);
+  const riotId = riotIdInput?.value.trim();
+  const region = regionInput?.value || "eu";
 
-  if (!parsed) {
+  if (!riotId) {
+    alert("Please enter Riot ID like TenZ#NA1");
+    return;
+  }
+
+  if (!riotId.includes("#")) {
     alert("Please enter Riot ID in this format: Name#TAG");
     return;
   }
 
-  const player = allPlayers.find(
-    (item) =>
-      item.name.toLowerCase() === parsed.name.toLowerCase() &&
-      item.tag.toLowerCase() === parsed.tag.toLowerCase()
-  );
+  const [name, tag] = riotId.split("#");
 
-  if (!player) {
-    alert("Player not found.");
+  if (!name || !tag) {
+    alert("Please enter a valid Riot ID like TenZ#NA1");
     return;
   }
 
-  setLoggedInPlayer(player);
+  const player = {
+    name: name.trim(),
+    tag: tag.trim(),
+    region: region
+  };
+
+  localStorage.setItem("valorateLoggedPlayer", JSON.stringify(player));
   renderLoggedInPlayer();
 }
 
@@ -116,36 +123,39 @@ function renderLoggedInPlayer() {
   const loggedInState = document.getElementById("loggedInState");
   const myRankPanel = document.getElementById("myRankPanel");
 
-  if (!authState || !loggedInState) return;
+  if (!authState || !loggedInState || !myRankPanel) return;
 
   const player = getLoggedInPlayer();
+
+  const userMenu = document.getElementById("userMenu");
+  const userMenuName = document.getElementById("userMenuName");
+  const userProfileLink = document.getElementById("userProfileLink");
 
   if (!player) {
     authState.style.display = "block";
     loggedInState.style.display = "none";
     loggedInState.innerHTML = "";
+    myRankPanel.style.display = "block";
+
+    if (userMenu) userMenu.style.display = "none";
+
     return;
-    // LOGIN OLDU
-myRankPanel.style.display = "none";
-
-const userMenu = document.getElementById("userMenu");
-const userMenuName = document.getElementById("userMenuName");
-const userProfileLink = document.getElementById("userProfileLink");
-
-if (userMenu) {
-  userMenu.style.display = "block";
-}
-
-if (userMenuName) {
-  userMenuName.textContent = `${player.name}#${player.tag}`;
-}
-
-if (userProfileLink) {
-  userProfileLink.href =
-    `player.html?name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}`;
-}
   }
-  myRankPanel.style.display = "none";
+
+  myRankPanel.style.display = "block";
+
+  if (userMenu) {
+    userMenu.style.display = "block";
+  }
+
+  if (userMenuName) {
+    userMenuName.textContent = `${player.name}#${player.tag}`;
+  }
+
+  if (userProfileLink) {
+    userProfileLink.href =
+      `player.html?name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}`;
+  }
 
   const bestAgent = getTopAgent(player.stats);
   const avgWinRate = getAverageWinRate(player.stats);
@@ -162,9 +172,9 @@ if (userProfileLink) {
         <div>
           <h2>${player.name}#${player.tag}</h2>
           <p>
-  ${player.region} •
-  <span class="rank-pill ${getRankClass(player.rank)}">${player.rank}</span>
-</p>
+            ${player.region} •
+            <span class="rank-pill ${getRankClass(player.rank)}">${player.rank}</span>
+          </p>
         </div>
 
         <div class="my-rank-actions">
@@ -203,6 +213,40 @@ if (userProfileLink) {
       </div>
     </div>
   `;
+}
+function loginFromNavbar() {
+  const riotIdInput = document.getElementById("navRiotId");
+  const regionInput = document.getElementById("navRegion");
+
+  const riotId = riotIdInput?.value.trim();
+  const region = regionInput?.value || "eu";
+
+  if (!riotId) {
+    alert("Please enter Riot ID like TenZ#NA1");
+    return;
+  }
+
+  if (!riotId.includes("#")) {
+    alert("Please enter Riot ID in this format: Name#TAG");
+    return;
+  }
+
+  const [name, tag] = riotId.split("#");
+
+  if (!name || !tag) {
+    alert("Please enter a valid Riot ID like TenZ#NA1");
+    return;
+  }
+
+  const player = {
+    name: name.trim(),
+    tag: tag.trim(),
+    region: region
+  };
+
+  localStorage.setItem("valorateLoggedPlayer", JSON.stringify(player));
+
+  renderLoggedInPlayer();
 }
 
 function getAgentImage(agentName) {
@@ -435,12 +479,6 @@ function setupAutocomplete() {
     }
   });
 }
-
-function getLoggedInPlayer() {
-  const saved = localStorage.getItem("valorateLoggedInPlayer");
-  return saved ? JSON.parse(saved) : null;
-}
-
 function setLoggedInPlayer(player) {
   localStorage.setItem("valorateLoggedInPlayer", JSON.stringify(player));
 }
@@ -520,39 +558,12 @@ function getRankClass(rank) {
 
   return "";
 }
-
-function loginPlayer() {
-  const input = document.getElementById("loginRiotId");
-  if (!input) return;
-
-  const riotId = input.value.trim();
-  const parsed = parseRiotId(riotId);
-
-  if (!parsed) {
-    alert("Please enter Riot ID in this format: Name#TAG");
-    return;
-  }
-
-  const player = allPlayers.find(
-    (item) =>
-      item.name.toLowerCase() === parsed.name.toLowerCase() &&
-      item.tag.toLowerCase() === parsed.tag.toLowerCase()
-  );
-
-  if (!player) {
-    alert("Player not found.");
-    return;
-  }
-
-  setLoggedInPlayer(player);
-  renderLoggedInPlayer();
-}
-
-function renderLoggedInPlayer() {
+async function renderLoggedInPlayer() {
   const authState = document.getElementById("authState");
   const loggedInState = document.getElementById("loggedInState");
+  const myRankPanel = document.getElementById("myRankPanel");
 
-  if (!authState || !loggedInState) return;
+  if (!authState || !loggedInState || !myRankPanel) return;
 
   const player = getLoggedInPlayer();
 
@@ -560,65 +571,139 @@ function renderLoggedInPlayer() {
     authState.style.display = "block";
     loggedInState.style.display = "none";
     loggedInState.innerHTML = "";
+    myRankPanel.style.display = "block";
     return;
   }
 
-  const bestAgent = getTopAgent(player.stats);
-  const avgWinRate = getAverageWinRate(player.stats);
-  const avgKda = getAverageKda(player.stats);
-  const totalMatches = getTotalMatches(player.stats);
-  const globalPosition = findPlayerGlobalPosition(player.name, player.tag);
-
   authState.style.display = "none";
   loggedInState.style.display = "block";
+  myRankPanel.style.display = "block";
 
   loggedInState.innerHTML = `
     <div class="my-rank-card">
       <div class="my-rank-header">
         <div>
           <h2>${player.name}#${player.tag}</h2>
-          <p>
-  ${player.region} •
-  <span class="rank-pill ${getRankClass(player.rank)}">${player.rank}</span>
-</p>
+          <p>Loading live season stats...</p>
         </div>
 
         <div class="my-rank-actions">
-          <a class="profile-btn" href="player.html?mode=live&region=${encodeURIComponent((player.region || "eu").toLowerCase())}&name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}">
+          <a class="profile-btn" href="player.html?mode=live&region=${encodeURIComponent(player.region)}&name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}">
             Open My Profile
           </a>
           <button class="logout-btn" onclick="logoutPlayer()">Logout</button>
         </div>
       </div>
-
-      <div class="my-rank-stats">
-        <div class="my-rank-mini-card">
-          <span>Global Position</span>
-          <strong>#${globalPosition}</strong>
-        </div>
-
-        <div class="my-rank-mini-card">
-          <span>Best Agent</span>
-          <strong>${bestAgent.agent}</strong>
-        </div>
-
-        <div class="my-rank-mini-card">
-          <span>Avg Win Rate</span>
-          <strong>${avgWinRate}%</strong>
-        </div>
-
-        <div class="my-rank-mini-card">
-          <span>Avg KDA</span>
-          <strong>${avgKda}</strong>
-        </div>
-
-        <div class="my-rank-mini-card">
-          <span>Total Matches</span>
-          <strong>${totalMatches}</strong>
-        </div>
-      </div>
     </div>
   `;
+
+  try {
+    const liveResponse = await fetch(
+      `${window.location.origin}/live-player/${encodeURIComponent(player.region)}/${encodeURIComponent(player.name)}/${encodeURIComponent(player.tag)}`
+    );
+    const liveData = await liveResponse.json();
+
+    const seasonResponse = await fetch(
+      `${window.location.origin}/live-season-stats/${encodeURIComponent(player.region)}/${encodeURIComponent(player.name)}/${encodeURIComponent(player.tag)}`
+    );
+    const seasonData = await seasonResponse.json();
+
+    const account = liveData.account?.data || {};
+    const mmr = liveData.mmr?.data || {};
+    const summary = seasonData?.summary || {};
+    const agents = seasonData?.agents || [];
+    const bestAgent = agents[0] || null;
+
+    const rankName = mmr?.current_data?.currenttierpatched || "Unranked";
+    const rr = mmr?.current_data?.ranking_in_tier ?? 0;
+
+    // Şimdilik local/global simülasyon
+    const globalPosition = typeof findPlayerGlobalPosition === "function"
+      ? findPlayerGlobalPosition(player.name, player.tag)
+      : "-";
+
+    const agentRank =
+      bestAgent && typeof findAgentLeaderboardRanks === "function"
+        ? await (async () => {
+            const ranks = await findAgentLeaderboardRanks([bestAgent]);
+            return ranks?.[0]?.rank || null;
+          })()
+        : null;
+
+    loggedInState.innerHTML = `
+      <div class="my-rank-card">
+        <div class="my-rank-header">
+          <div>
+            <h2>${player.name}#${player.tag}</h2>
+            <p>
+              ${(account.region || player.region).toUpperCase()} •
+              <span class="rank-pill ${getRankClass(rankName)}">${rankName}</span>
+              • ${rr} RR
+            </p>
+          </div>
+
+          <div class="my-rank-actions">
+            <a class="profile-btn" href="player.html?mode=live&region=${encodeURIComponent(player.region)}&name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}">
+              Open My Profile
+            </a>
+            <button class="logout-btn" onclick="logoutPlayer()">Logout</button>
+          </div>
+        </div>
+
+        <div class="my-rank-stats">
+          <div class="my-rank-mini-card">
+            <span>Global Position</span>
+            <strong>${globalPosition || "-"}</strong>
+          </div>
+
+          <div class="my-rank-mini-card">
+            <span>Best Agent</span>
+            <strong>${bestAgent?.agent || "Unknown"}</strong>
+          </div>
+
+          <div class="my-rank-mini-card">
+            <span>Season Win Rate</span>
+            <strong>${summary.winRate || "0.0"}%</strong>
+          </div>
+
+          <div class="my-rank-mini-card">
+            <span>Season KDA</span>
+            <strong>${summary.kda || "0.00"}</strong>
+          </div>
+
+          <div class="my-rank-mini-card">
+            <span>Season Matches</span>
+            <strong>${seasonData?.totalMatches || 0}</strong>
+          </div>
+
+          <div class="my-rank-mini-card">
+            <span>Agent Rank</span>
+            <strong>${agentRank ? `#${agentRank}` : "-"}</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    console.error("renderLoggedInPlayer error:", error);
+
+    loggedInState.innerHTML = `
+      <div class="my-rank-card">
+        <div class="my-rank-header">
+          <div>
+            <h2>${player.name}#${player.tag}</h2>
+            <p>Could not load live stats.</p>
+          </div>
+
+          <div class="my-rank-actions">
+            <a class="profile-btn" href="player.html?mode=live&region=${encodeURIComponent(player.region)}&name=${encodeURIComponent(player.name)}&tag=${encodeURIComponent(player.tag)}">
+              Open My Profile
+            </a>
+            <button class="logout-btn" onclick="logoutPlayer()">Logout</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 }
 
 async function initApp() {
