@@ -43,7 +43,7 @@
   </button>
 
   <div id="userDropdown" class="user-dropdown">
-    <a id="userProfileLink">My Profile</a>
+    <a id="userProfileLink" href="#">My Profile</a>
     <a href="leaderboard.html">Leaderboard</a>
     <a onclick="logoutPlayer()">Logout</a>
   </div>
@@ -94,26 +94,20 @@
 <div id="autocompleteBox" class="autocomplete-box"></div>
 
 <div class="panel my-rank-panel" id="myRankPanel">
+
   <div id="authState">
-  <h2>My Ranking</h2>
-  <p>Enter your Riot ID to view your current season overview.</p>
+    <h2>My Ranking</h2>
 
-  <div class="login-form">
-    <select id="loginRegion">
-      <option value="eu">EU</option>
-      <option value="na">NA</option>
-      <option value="ap">AP</option>
-      <option value="kr">KR</option>
-      <option value="latam">LATAM</option>
-      <option value="br">BR</option>
-    </select>
+    <p>Track your personal VALORANT performance.</p>
 
-    <input type="text" id="loginRiotId" placeholder="Enter Riot ID (example: TenZ#NA1)" />
-    <button onclick="loginPlayer()">Sign In</button>
+    <div class="login-hint">
+      <p>Sign in from the top right corner to view your personal statistics.</p>
+    </div>
+
   </div>
-</div>
 
   <div id="loggedInState" style="display:none;"></div>
+
 </div>
   </section>
  

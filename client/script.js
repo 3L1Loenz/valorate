@@ -20,16 +20,6 @@ function toggleUserMenu() {
     dropdown.style.display = "block";
   }
 }
-function toggleUserMenu() {
-  const dropdown = document.getElementById("userDropdown");
-
-  if (dropdown.style.display === "block") {
-    dropdown.style.display = "none";
-  } else {
-    dropdown.style.display = "block";
-  }
-}
-
 function parseRiotId(riotId) {
   if (!riotId.includes("#")) return null;
 
@@ -482,12 +472,6 @@ function setupAutocomplete() {
 function setLoggedInPlayer(player) {
   localStorage.setItem("valorateLoggedInPlayer", JSON.stringify(player));
 }
-
-function logoutPlayer() {
-  localStorage.removeItem("valorateLoggedInPlayer");
-  renderLoggedInPlayer();
-}
-
 function parseRiotId(riotId) {
   if (!riotId.includes("#")) return null;
 
@@ -704,6 +688,10 @@ async function renderLoggedInPlayer() {
       </div>
     `;
   }
+}
+function logoutPlayer() {
+  localStorage.removeItem("valorateLoggedInPlayer");
+  renderLoggedInPlayer();
 }
 
 async function initApp() {
