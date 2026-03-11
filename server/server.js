@@ -223,9 +223,7 @@ app.get("/live-matches/:region/:name/:tag", async (req, res) => {
   }
 });
 app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
-
   try {
-
     if (!HENRIK_API_KEY) {
       return res.status(500).json({
         error: "Henrik API key missing"
@@ -233,14 +231,26 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
     }
 
     const { region, name, tag } = req.params;
-
     const normalizedRegion = region.toLowerCase();
+
+    const allowedRegions = ["eu", "na", "ap", "kr", "latam", "br"];
+    if (!allowedRegions.includes(normalizedRegion)) {
+      return res.status(400).json({
+        error: "Invalid region"
+      });
+    }
+
+    const cacheKey = `${normalizedRegion}:${name}:${tag}`;
+    const cached = seasonCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return res.json(cached.data);
+    }
 
     const headers = {
       Authorization: HENRIK_API_KEY
     };
 
-    // ACCOUNT
     const accountResponse = await axios.get(
       `https://api.henrikdev.xyz/valorant/v1/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
       { headers }
@@ -250,71 +260,168 @@ app.get("/live-season-stats/:region/:name/:tag", async (req, res) => {
 
     if (!account?.puuid) {
       return res.status(404).json({
-        error: "Player not found"
+        error: "Player PUUID not found"
       });
     }
 
     const puuid = account.puuid;
 
-    let allMatches = [];
-    let start = 0;
-    const size = 10;
+    const matchesResponse = await axios.get(
+      `https://api.henrikdev.xyz/valorant/v1/by-puuid/stored-matches/${normalizedRegion}/${encodeURIComponent(puuid)}?mode=competitive`,
+      { headers }
+    );
 
-    let currentSeasonId = null;
-    let reachedOldSeason = false;
+    const matches = matchesResponse.data?.data || [];
 
-    while (!reachedOldSeason) {
+    if (!matches.length) {
+      const emptyPayload = {
+        season: null,
+        totalMatches: 0,
+        summary: {
+          winRate: "0.0",
+          kda: "0.00",
+          kills: 0,
+          deaths: 0,
+          assists: 0
+        },
+        agents: [],
+        recentMatches: []
+      };
 
-      const matchResponse = await axios.get(
-        `https://api.henrikdev.xyz/valorant/v4/by-puuid/matches/${normalizedRegion}/pc/${puuid}?mode=competitive&size=${size}&start=${start}`,
-        { headers }
-      );
+      seasonCache.set(cacheKey, {
+        timestamp: Date.now(),
+        data: emptyPayload
+      });
 
-      const pageMatches = matchResponse.data?.data || [];
-
-      if (!pageMatches.length) break;
-
-      if (!currentSeasonId) {
-        currentSeasonId = pageMatches[0]?.meta?.season?.id;
-      }
-
-      for (const match of pageMatches) {
-
-        const seasonId = match?.meta?.season?.id;
-
-        if (seasonId !== currentSeasonId) {
-          reachedOldSeason = true;
-          break;
-        }
-
-        allMatches.push(match);
-      }
-
-      start += size;
-
-      // API'yı boğmamak için küçük bekleme
-      await new Promise(r => setTimeout(r, 200));
-
+      return res.json(emptyPayload);
     }
 
-    res.json({
-      season: {
-        id: currentSeasonId
-      },
-      totalMatches: allMatches.length,
-      recentMatches: allMatches
+    const sortedMatches = [...matches].sort(
+      (a, b) => new Date(b.meta?.started_at || 0) - new Date(a.meta?.started_at || 0)
+    );
+
+    const currentSeasonId = sortedMatches[0]?.meta?.season?.id || null;
+    const currentSeasonShort = sortedMatches[0]?.meta?.season?.short || null;
+
+    const seasonMatches = sortedMatches.filter(
+      (m) => m.meta?.season?.id === currentSeasonId
+    );
+
+    let totalKills = 0;
+    let totalDeaths = 0;
+    let totalAssists = 0;
+    let totalWins = 0;
+
+    const agentMap = {};
+
+    seasonMatches.forEach((match) => {
+      const stats = match.stats || {};
+
+      const kills = Number(stats.kills || 0);
+      const deaths = Number(stats.deaths || 0);
+      const assists = Number(stats.assists || 0);
+
+      const playerTeam = String(stats.team || "").toLowerCase().trim();
+
+      const redValue = match.teams?.red;
+      const blueValue = match.teams?.blue;
+
+      let redScore = 0;
+      let blueScore = 0;
+
+      if (typeof redValue === "number") {
+        redScore = redValue;
+      } else if (typeof redValue === "object" && redValue !== null) {
+        redScore = Number(redValue.rounds_won ?? redValue.score ?? redValue.value ?? 0);
+      }
+
+      if (typeof blueValue === "number") {
+        blueScore = blueValue;
+      } else if (typeof blueValue === "object" && blueValue !== null) {
+        blueScore = Number(blueValue.rounds_won ?? blueValue.score ?? blueValue.value ?? 0);
+      }
+
+      const won =
+        (playerTeam === "red" && redScore > blueScore) ||
+        (playerTeam === "blue" && blueScore > redScore);
+
+      totalKills += kills;
+      totalDeaths += deaths;
+      totalAssists += assists;
+
+      if (won) totalWins += 1;
+
+      const agent = stats.character?.name || "Unknown";
+
+      if (!agentMap[agent]) {
+        agentMap[agent] = {
+          agent,
+          matches: 0,
+          wins: 0,
+          kills: 0,
+          deaths: 0,
+          assists: 0
+        };
+      }
+
+      agentMap[agent].matches += 1;
+      agentMap[agent].kills += kills;
+      agentMap[agent].deaths += deaths;
+      agentMap[agent].assists += assists;
+
+      if (won) {
+        agentMap[agent].wins += 1;
+      }
     });
 
-  } catch (error) {
+    const totalMatches = seasonMatches.length;
 
+    const summary = {
+      winRate: totalMatches > 0 ? ((totalWins / totalMatches) * 100).toFixed(1) : "0.0",
+      kda: ((totalKills + totalAssists) / Math.max(totalDeaths, 1)).toFixed(2),
+      kills: totalKills,
+      deaths: totalDeaths,
+      assists: totalAssists
+    };
+
+    const agents = Object.values(agentMap)
+      .map((a) => ({
+        agent: a.agent,
+        matches: a.matches,
+        wins: a.wins,
+        winRate: a.matches > 0 ? ((a.wins / a.matches) * 100).toFixed(1) : "0.0",
+        kda: ((a.kills + a.assists) / Math.max(a.deaths, 1)).toFixed(2),
+        kills: a.kills,
+        deaths: a.deaths,
+        assists: a.assists
+      }))
+      .sort((a, b) => b.matches - a.matches);
+
+    const payload = {
+      season: {
+        id: currentSeasonId,
+        short: currentSeasonShort
+      },
+      totalMatches,
+      summary,
+      agents,
+      recentMatches: seasonMatches
+    };
+
+    seasonCache.set(cacheKey, {
+      timestamp: Date.now(),
+      data: payload
+    });
+
+    res.json(payload);
+  } catch (error) {
     console.error("Season stats error:", error.response?.data || error.message);
 
     res.status(500).json({
-      error: "Season stats error"
+      error: "Season stats error",
+      details: error.response?.data || error.message
     });
-
   }
-
 });
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on http://localhost:${PORT}`);
